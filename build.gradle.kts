@@ -12,11 +12,19 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
+// A pruned file tree, not a glob over the root: walking build/ while parallel tasks write to it made Spotless
+// fail with "Could not read path .../build/...". Excluded directories are not traversed.
+fun sources(include: String) =
+    fileTree(rootDir) {
+        include(include)
+        exclude("**/build/**", "**/bin/**", "**/.gradle/**", "**/.kotlin/**")
+        // Fixtures break the architecture rules on purpose (star imports, qualified names): not linted.
+        exclude("architecture-tests/src/test/fixtures/**")
+    }
+
 spotless {
     kotlin {
-        target("**/src/**/*.kt")
-        // Fixtures break the architecture rules on purpose (star imports, qualified names): not linted.
-        targetExclude("**/build/**", "architecture-tests/src/test/fixtures/**")
+        target(sources("**/src/**/*.kt"))
         ktlint(libs.versions.ktlint.get()).customRuleSets(
             listOf(
                 libs.compose.rules.ktlint
@@ -26,8 +34,7 @@ spotless {
         )
     }
     kotlinGradle {
-        target("*.gradle.kts", "**/*.gradle.kts")
-        targetExclude("**/build/**")
+        target(sources("**/*.gradle.kts"))
         ktlint(libs.versions.ktlint.get())
     }
 }
