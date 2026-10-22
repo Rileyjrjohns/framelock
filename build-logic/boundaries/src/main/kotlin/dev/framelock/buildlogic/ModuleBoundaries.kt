@@ -4,8 +4,9 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.FileCollectionDependency
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.initialization.Settings
@@ -26,27 +27,37 @@ class ModuleBoundariesSettingsPlugin : Plugin<Settings> {
     }
 }
 
-/** Registers `verifyModuleBoundaries` and makes `check` depend on it. */
+/**
+ * Registers `verifyModuleBoundaries` and makes `check` depend on it.
+ *
+ * The check works on **resolved** classpaths, transitively, not on declared dependencies: whatever way a dependency
+ * gets there (substitution, `extendsFrom`, a test fixture, a transitive edge), what ends up on a classpath is checked.
+ */
 class ModuleBoundariesPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val role = ModuleRole.of(project.path)
         val verify =
             project.tasks.register<VerifyModuleBoundaries>("verifyModuleBoundaries") {
                 group = "verification"
-                description = "Fails if this module depends on a module or library its role forbids."
+                description = "Fails if this module reaches a module or library its role forbids."
                 modulePath.set(project.path)
-                projectDependencies.set(project.provider { declaredProjectDependencies(project) })
             }
-        if (role.isCore) {
-            project.pluginManager.withPlugin("java") {
+        project.configurations.configureEach {
+            val configuration = this
+            if (isCanBeResolved && ModuleRole.isClasspath(name)) {
+                val root = incoming.resolutionResult.rootComponent
+                verify.configure { reached.addAll(root.map { reachedComponents(configuration.name, it) }) }
+            }
+            if (role.isCore) {
+                // A jar added with files(...) has no component identity, so the classpath walk cannot see it.
                 verify.configure {
-                    for (name in listOf("compileClasspath", "runtimeClasspath")) {
-                        val root =
-                            project.configurations
-                                .getByName(name)
-                                .incoming.resolutionResult.rootComponent
-                        externalModules.addAll(root.map { externalModulesOf(it).map { module -> "$name: $module" } })
-                    }
+                    fileDependencies.addAll(
+                        project.provider {
+                            configuration.dependencies.withType(FileCollectionDependency::class.java).map {
+                                configuration.name
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -55,30 +66,38 @@ class ModuleBoundariesPlugin : Plugin<Project> {
         }
     }
 
-    private fun declaredProjectDependencies(project: Project): List<String> =
-        project.configurations.flatMap { configuration ->
-            configuration.dependencies
-                .withType(ProjectDependency::class.java)
-                .map { "${configuration.name}$SEPARATOR${it.path}" }
-        }
-
-    private fun externalModulesOf(root: ResolvedComponentResult): List<String> {
+    /** Entries `classpath|project|:path`, `classpath|foreign-project|:build:path` or `classpath|module|group:name`. */
+    private fun reachedComponents(
+        classpath: String,
+        root: ResolvedComponentResult,
+    ): List<String> {
         val seen = mutableSetOf<ResolvedComponentResult>()
         val pending = ArrayDeque(listOf(root))
-        val modules = sortedSetOf<String>()
+        val entries = sortedSetOf<String>()
         while (pending.isNotEmpty()) {
             val component = pending.removeFirst()
             if (!seen.add(component)) continue
-            (component.id as? ModuleComponentIdentifier)?.let { modules += "${it.group}:${it.module}" }
+            if (component !== root) {
+                when (val id = component.id) {
+                    is ProjectComponentIdentifier -> {
+                        entries +=
+                            if (id.buildTreePath == id.projectPath) {
+                                "$classpath|project|${id.projectPath}"
+                            } else {
+                                "$classpath|foreign-project|${id.buildTreePath}"
+                            }
+                    }
+
+                    is ModuleComponentIdentifier -> {
+                        entries += "$classpath|module|${id.group}:${id.module}"
+                    }
+                }
+            }
             component.dependencies
                 .filterIsInstance<ResolvedDependencyResult>()
                 .forEach { pending += it.selected }
         }
-        return modules.toList()
-    }
-
-    internal companion object {
-        const val SEPARATOR = " -> "
+        return entries.toList()
     }
 }
 
@@ -86,29 +105,45 @@ abstract class VerifyModuleBoundaries : DefaultTask() {
     @get:Input
     abstract val modulePath: Property<String>
 
-    /** Entries `configuration -> :project:path`. */
+    /** Components reached on each classpath, see [ModuleBoundariesPlugin]. */
     @get:Input
-    abstract val projectDependencies: ListProperty<String>
+    abstract val reached: ListProperty<String>
 
-    /** Entries `classpath: group:module`, only for `:core:*` modules. */
+    /** Configurations of a `:core:*` module that declare a `files(...)` dependency. */
     @get:Input
-    abstract val externalModules: ListProperty<String>
+    abstract val fileDependencies: ListProperty<String>
 
     @TaskAction
     fun verify() {
         val path = modulePath.get()
         val role = ModuleRole.of(path)
         val violations = mutableListOf<String>()
-        for (entry in projectDependencies.get()) {
-            val (configuration, target) = entry.split(ModuleBoundariesPlugin.SEPARATOR)
-            if (target == path) continue
-            role.projectDependencyViolation(configuration, target)?.let { violations += it }
-        }
-        for (entry in externalModules.get()) {
-            val module = entry.substringAfter(": ")
-            if (!ModuleRole.isAllowedInCore(module)) {
-                violations += "$role may only use kotlinx-coroutines-core, found $entry"
+        for (entry in reached.get()) {
+            val (classpath, kind, target) = entry.split('|')
+            val production = !ModuleRole.isTestClasspath(classpath)
+            when (kind) {
+                "project" -> {
+                    if (target != path && ModuleRole.of(target) !in role.allowedOn(classpath)) {
+                        violations += "$role may not reach $target (${ModuleRole.of(target)}) on '$classpath'"
+                    }
+                }
+
+                "foreign-project" -> {
+                    violations += "$role may not reach $target from another build on '$classpath'"
+                }
+
+                "module" -> {
+                    // Test tooling may bring javax.inject transitively (espresso does); production may not.
+                    if (production && ModuleRole.isDependencyInjection(target)) {
+                        violations += "No DI framework or annotation library is allowed: $target on '$classpath'"
+                    } else if (role.isCore && production && !ModuleRole.isAllowedInCore(target)) {
+                        violations += "$role may only use kotlinx-coroutines-core, found $target on '$classpath'"
+                    }
+                }
             }
+        }
+        for (configuration in fileDependencies.get().distinct()) {
+            violations += "$role may not declare files(...) dependencies, found on '$configuration'"
         }
         if (violations.isNotEmpty()) {
             throw GradleException(

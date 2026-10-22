@@ -4,7 +4,7 @@ import org.gradle.api.GradleException
 
 /**
  * Role of a module in the hexagonal layout, derived from its Gradle path.
- * The allowed dependencies of each role are the rules of docs/architecture.md ("Modules").
+ * The allowed dependencies of each role are the rules of docs/architecture.md ("Modules") and ADR-006.
  */
 enum class ModuleRole {
     /** Implicit parent projects such as `:core` and `:adapters`: no sources, no dependencies. */
@@ -20,33 +20,39 @@ enum class ModuleRole {
     val isCore: Boolean
         get() = this == CORE_DOMAIN || this == CORE_APPLICATION || this == CORE_TESTING
 
-    /** Returns why [target] is not allowed on [configuration], or null if it is allowed. */
-    fun projectDependencyViolation(
-        configuration: String,
-        target: String,
-    ): String? {
-        val targetRole = of(target)
-        val allowedOnMain =
+    /**
+     * Roles this module may reach, directly or transitively, on a classpath.
+     * Test classpaths may additionally reach `:core:testing`.
+     */
+    fun allowedOn(classpath: String): Set<ModuleRole> {
+        val production =
             when (this) {
                 CONTAINER, CORE_DOMAIN, ARCHITECTURE_TESTS -> emptySet()
                 CORE_APPLICATION, CORE_TESTING, ADAPTER -> setOf(CORE_DOMAIN)
                 APP -> setOf(CORE_DOMAIN, CORE_APPLICATION, ADAPTER)
             }
-        val allowed =
-            if (isTestConfiguration(configuration) && this != ARCHITECTURE_TESTS) {
-                allowedOnMain + CORE_TESTING
-            } else {
-                allowedOnMain
-            }
-        return if (targetRole in allowed) {
-            null
-        } else {
-            "$name may not depend on $target ($targetRole) through '$configuration'"
-        }
+        return if (isTestClasspath(classpath) && this != ARCHITECTURE_TESTS) production + CORE_TESTING else production
     }
 
     companion object {
         private const val ADAPTERS_PREFIX = ":adapters:"
+
+        /**
+         * Test classpaths, recognised by their exact shape: `testCompileClasspath`, `testRuntimeClasspath` (JVM) and
+         * `<variant>UnitTest…Classpath` / `<variant>AndroidTest…Classpath` (AGP). Every other classpath, including
+         * `testFixtures…` and flavors whose name merely contains "Test", is treated as production.
+         */
+        private val TEST_CLASSPATH =
+            Regex(
+                "^test(Compile|Runtime)Classpath$|^[a-z][A-Za-z0-9]*(UnitTest|AndroidTest)(Compile|Runtime)Classpath$",
+            )
+
+        /** Classpath configurations checked by `verifyModuleBoundaries`. */
+        private val CLASSPATH = Regex("^(compile|runtime)Classpath$|^[a-z][A-Za-z0-9]*(Compile|Runtime)Classpath$")
+
+        /** Libraries forbidden on every production classpath: manual DI only (no Hilt, no Koin, no DI annotations). */
+        private val DI_GROUPS =
+            setOf("com.google.dagger", "io.insert-koin", "javax.inject", "jakarta.inject", "com.google.inject")
 
         fun of(path: String): ModuleRole =
             when {
@@ -69,15 +75,17 @@ enum class ModuleRole {
                 )
             }
 
-        /** `testImplementation`, `androidTestImplementation`, `kspTest`, `debugUnitTestRuntimeClasspath`, ... */
-        fun isTestConfiguration(name: String): Boolean =
-            name.startsWith("test") || name.startsWith("androidTest") || name.contains("Test")
+        fun isClasspath(configuration: String): Boolean = CLASSPATH.matches(configuration)
 
-        /** External libraries allowed on the classpaths of `:core:*` (only kotlinx-coroutines-core, plus Kotlin itself). */
+        fun isTestClasspath(configuration: String): Boolean = TEST_CLASSPATH.matches(configuration)
+
+        /** External libraries allowed on the production classpaths of `:core:*`: kotlinx-coroutines-core and Kotlin. */
         fun isAllowedInCore(module: String): Boolean =
             module.startsWith("org.jetbrains.kotlin:kotlin-stdlib") ||
                 module.startsWith("org.jetbrains.kotlinx:kotlinx-coroutines-core") ||
                 module == "org.jetbrains.kotlinx:kotlinx-coroutines-bom" ||
                 module == "org.jetbrains:annotations"
+
+        fun isDependencyInjection(module: String): Boolean = module.substringBefore(':') in DI_GROUPS
     }
 }
