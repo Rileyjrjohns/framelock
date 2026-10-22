@@ -5,7 +5,12 @@ build/
 local.properties
 captures/
 
-# IDE
+# IDE (bin/ and .project/.classpath/.settings come from the VS Code Java extension)
+bin/
+.project
+.classpath
+.settings/
+.vscode/
 .idea/
 *.iml
 .DS_Store
