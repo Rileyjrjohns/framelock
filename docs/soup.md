@@ -1,7 +1,9 @@
-# Software of unknown provenance (third-party software)
+# Third-party software
 
-Every third-party component in the build, with its version, purpose and licence. Versions come from
-`gradle/libs.versions.toml`; a component is listed when a module starts using it.
+Every third-party component in the build, with its version, purpose and licence. Direct dependencies come from
+`gradle/libs.versions.toml`; a component is listed when a module starts using it. Transitive components shipped in
+the APK are listed from `./gradlew :app:dependencies --configuration releaseRuntimeClasspath` and re-checked at
+every milestone. Licences are read from each artifact's POM.
 
 ## Shipped in the APK
 
@@ -13,6 +15,17 @@ Every third-party component in the build, with its version, purpose and licence.
 | Jetpack Compose (BOM 2026.09.00: ui 1.12.1, foundation, material3 1.4.0) | BOM 2026.09.00 | UI | Apache-2.0 |
 | AndroidX Activity Compose | 1.13.0 | Compose entry point | Apache-2.0 |
 | AndroidX Lifecycle (runtime-compose, viewmodel-compose) | 2.11.0 | Lifecycle-aware state, ViewModels | Apache-2.0 |
+
+### Transitive, shipped in the APK (M0)
+
+| Group | Versions | Licence |
+|---|---|---|
+| `androidx.*`: activity, annotation, arch.core, autofill, collection, compose (animation, foundation, material-ripple, runtime, ui), concurrent-futures, core-viewtree, customview-poolingcontainer, emoji2 1.4.0, graphics-path, interpolator, lifecycle (common, livedata-core, process, runtime, viewmodel, savedstate), navigationevent 1.0.0, profileinstaller 1.4.0, savedstate 1.4.0, startup-runtime 1.1.1, tracing 1.2.0, versionedparcelable, window 1.5.0 | as resolved | Apache-2.0 |
+| `org.jetbrains.kotlinx:kotlinx-coroutines-android` | 1.11.0 | Apache-2.0 |
+| `org.jetbrains.kotlinx:kotlinx-serialization-core` (via Compose) | 1.7.3 | Apache-2.0 |
+| `org.jetbrains:annotations` | 23.0.0 | Apache-2.0 |
+| `org.jspecify:jspecify` | 1.0.0 | Apache-2.0 |
+| `com.google.guava:listenablefuture` | 1.0 | Apache-2.0 |
 
 ## Tests only
 
@@ -36,7 +49,7 @@ Every third-party component in the build, with its version, purpose and licence.
 | Foojay toolchain resolver | 1.0.0 | JDK provisioning | Apache-2.0 |
 | Spotless | 8.10.4 | Formatting check | Apache-2.0 |
 | ktlint | 1.8.0 | Kotlin style | MIT |
-| Compose rules for ktlint (`io.nlopez.compose.rules`) | 0.6.8 | Compose lint rules | to verify |
+| Compose rules for ktlint (`io.nlopez.compose.rules`) | 0.6.8 | Compose lint rules | Apache-2.0 |
 | detekt | 1.23.8 | Static analysis of `:core:*` | Apache-2.0 |
 | GitHub Actions: checkout v7, setup-java v6, upload-artifact v7 | — | CI | MIT |
 | GitHub Action: gradle/actions/setup-gradle v6 | — | CI, wrapper validation, cache | MIT; caching component under the Gradle Terms of Use |
@@ -51,8 +64,8 @@ Recorded with their milestone so licences are reviewed before code depends on th
 | LiteRT (`litert`, `litert-gpu`) | 1.4.2 | M2 | Apache-2.0 |
 | EfficientDet-Lite0 detection model | Kaggle v1 | M2 | Apache-2.0; trained on COCO 2017 (annotations CC BY 4.0, images under Flickr terms) |
 | UVCAndroid (`com.herohan:UVCAndroid`) | 1.0.13 | M3 | Apache-2.0; bundles libusb (LGPL-2.1), libuvc (BSD), libjpeg-turbo and libyuv (BSD); transitive hutool-core (Mulan PSL v2) |
-| AndroidX Tracing | 2.0.5 | M4 | Apache-2.0 |
+| AndroidX Tracing (direct; 1.2.0 already ships transitively) | 2.0.5 | M4 | Apache-2.0 |
 | kotlinx-serialization-json | 1.12.0 | M5/M6 | Apache-2.0 |
 | Room | 2.8.5 | M6 | Apache-2.0 |
 | WorkManager | 2.12.0 | M6 | Apache-2.0 |
-| Benchmark, Baseline Profile plugin, ProfileInstaller, UI Automator | 1.5.0 / 1.4.1 / 2.4.0 | M7 | Apache-2.0 |
+| Benchmark, Baseline Profile plugin, ProfileInstaller (direct; 1.4.0 already ships transitively), UI Automator | 1.5.0 / 1.4.1 / 2.4.0 | M7 | Apache-2.0 |

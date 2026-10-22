@@ -5,15 +5,18 @@ Each requirement of [architecture.md](architecture.md) maps to the tests that co
 
 ## Architecture and build (M0)
 
+Gradle tests are in `build-logic/boundaries` (`ModuleBoundariesPluginTest`), Konsist tests in `architecture-tests`
+(`LayeringRulesTest` on the repository, `RuleFixturesTest` on fixtures that break each rule).
+
 | ID | Requirement | Tests | Status |
 |---|---|---|---|
-| ARCH-1 | Core is pure Kotlin: no `android.*`, no DI annotations, only kotlinx-coroutines-core | `LayeringRulesTest`: core does not import android…; core uses no DI annotations; core main imports only…; `ModuleBoundariesPluginTest`: core module with an extra external library fails; … runtime only external library fails; compileOnly DI annotation in core fails | covered |
-| ARCH-2 | Adapters depend on `:core:domain` only, never on each other; only `:app` sees every module | `ModuleBoundariesPluginTest`: adapter depending on another adapter fails; adapter depending on core application fails; core domain depending on any project fails; core application depending on an adapter fails; depending on app fails; main configuration depending on core testing fails; test configuration may depend on core testing; module without a role fails; valid dependency graph passes. `LayeringRulesTest`: domain does not import application; adapters do not import another adapter's package; adapters do not import core application | covered |
-| ARCH-3 | Everything external behind a port; ports implemented only in adapters | `LayeringRulesTest`: ports are implemented only in adapters, core testing or test sources (no port yet, rule active from M1) | covered (vacuous until M1) |
-| ARCH-4 | Manual DI, no Hilt or Koin | `LayeringRulesTest`: app uses no Hilt or Koin | covered |
-| ARCH-5 | Architecture rules never pass on an empty scope | `LayeringRulesTest`: every module scope is non-empty | covered |
-| PIPE-1a | No `limitedParallelism` in the pipeline (ADR-002) | `LayeringRulesTest`: pipeline does not call limitedParallelism | covered |
-| CI-1 | Build, unit tests, ktlint, detekt, Konsist on every push | `.github/workflows/ci.yml` | covered |
+| ARCH-1 | Core is pure Kotlin: no `android.*`, no DI, only kotlinx-coroutines-core | Konsist: core does not reference android, androidx or com google android; core production imports only kotlin, kotlinx coroutines and the per-module allowlist; fixtures: android referenced by its qualified name in core is caught, not when in a comment; allowlisted class name does not allow classes sharing its prefix. Gradle: core module with an extra external library fails; core module with a runtime only external library fails; compileOnly DI annotation in core fails; files dependency in core fails | covered |
+| ARCH-2 | Adapters depend on `:core:domain` only, never on each other; only `:app` sees every module | Gradle: adapter depending on another adapter fails; adapter depending on core application fails; core domain depending on any project fails; core application depending on an adapter fails; depending on app fails; main configuration depending on core testing fails; test configuration may depend on core testing; dependency substitution to another adapter fails; custom configuration extended by main cannot carry core testing; production classpath whose name contains Test cannot carry core testing; test fixtures of core cannot carry core testing to an adapter; transitive edge is checked; module without a role fails; valid dependency graph passes. Konsist: domain does not reference application; adapters do not reference another adapter's package; adapters do not reference core application | covered |
+| ARCH-3 | Ports live in `core.domain.port` and are implemented only in adapters | Konsist: ports are implemented only in adapters, core testing or test sources; fixture: port implementations outside adapters are caught however they are written | covered (rule proven on fixtures; applies to real ports from M1) |
+| ARCH-4 | Manual DI: no Hilt, no Koin, no DI annotations anywhere | Konsist: no module references a DI framework or DI annotations; fixture: DI imports and qualified DI annotations are caught in an adapter. Gradle: DI library in an adapter fails | covered |
+| ARCH-5 | Architecture rules never pass on an empty scope | Konsist: every module scope is non-empty; each fixture test | covered |
+| PIPE-1a | No `limitedParallelism` in the core (ADR-002) | Konsist: core does not call limitedParallelism; fixture: limitedParallelism is caught in any core module, not in comments or strings | covered |
+| CI-1 | Build, unit tests, ktlint, detekt, Konsist on push to `main` and on pull requests | `.github/workflows/ci.yml` | planned (first run on first push) |
 
 ## Core (M1)
 

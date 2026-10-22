@@ -77,7 +77,7 @@ Dependency rules:
 
 ### Ports
 
-Driven (outbound), implemented by adapters:
+Driven (outbound), implemented by adapters. They live in `dev.framelock.core.domain.port`, are plain (not `fun`) interfaces, and value types that travel through them (e.g. `SourceEvent`) are sealed:
 
 ```kotlin
 interface FrameSource {
