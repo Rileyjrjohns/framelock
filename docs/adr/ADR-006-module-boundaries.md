@@ -34,8 +34,10 @@ checked. Every `compileClasspath`, `runtimeClasspath` and `<variant>(Compile|Run
 - **External libraries of `:core:*`** (production classpaths): only `kotlin-stdlib*`, `kotlinx-coroutines-core*`
   (and its BOM) and `org.jetbrains:annotations`. `files(...)` dependencies are refused in `:core:*`: a jar has no
   identity the check could verify.
-- **DI libraries** (`com.google.dagger`, `io.insert-koin`, `javax.inject`, `jakarta.inject`, `com.google.inject`) are
-  refused on every production classpath of every module. Test tooling may bring them transitively (espresso does).
+- **DI libraries** (`com.google.dagger`, `io.insert-koin`, `javax.inject`, `jakarta.inject`, `com.google.inject`) may
+  not be declared by any module on a production classpath. A third-party library may still use one internally:
+  CameraX's `camera-camera2-pipe` depends on Dagger at runtime, and espresso brings `javax.inject` to tests. Our own
+  code cannot reference them (Konsist rule below), and `:core:*` cannot reach them at all (allowlist above).
 - A project from another build is refused.
 
 TestKit tests in `build-logic/boundaries` prove each failure case, including the bypasses above.
@@ -65,8 +67,9 @@ the code (comments and strings removed).
   resolved through imports, aliases, star imports and the same package) and through object expressions.
 - The core never calls `limitedParallelism` (ADR-002).
 
-Every rule is also run on fixture trees (`architecture-tests/src/test/fixtures`) that break it on purpose, so a rule
-that silently stops matching fails its own test. Module scopes must be non-empty.
+Each rule selects its own scope from the whole file set, and the same call is run on fixture trees
+(`architecture-tests/src/test/fixtures`) that break it on purpose: a rule, or its scope, that silently stops matching
+fails its own test. Module scopes must be non-empty.
 
 ## Consequences
 
@@ -74,6 +77,10 @@ that silently stops matching fails its own test. Module scopes must be non-empty
 - The boundary plugin lives in its own build-logic project because settings plugins are loaded in the settings
   classloader, where AGP is not visible.
 - Every module keeps at least one source file, otherwise Konsist rules would pass on an empty scope.
-- Known limits: a check can still be disabled on purpose in a build script (as any Gradle check can), and a build
-  type literally named `unitTest` or `androidTest` would make its classpaths look like test ones. Both are visible
-  in review.
+- Known limits, all visible in review:
+  - a check can be disabled on purpose in a build script, as any Gradle check can;
+  - a port that is not listed in architecture.md (`Rules.KNOWN_PORTS`) and is declared outside the port package is
+    not recognised as a port: adding a port means adding it to both;
+  - a `typealias` of a port is not followed;
+  - the core import allowlist is import-level: a JDK class used by its fully qualified name without an import is not
+    seen (android and DI references are, in any form).

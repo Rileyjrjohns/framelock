@@ -60,7 +60,7 @@ Recorded with their milestone so licences are reviewed before code depends on th
 
 | Component | Version | Milestone | Licence |
 |---|---|---|---|
-| CameraX (core, camera2, lifecycle) | 1.6.2 | M2 | Apache-2.0 |
+| CameraX (core, camera2, lifecycle) | 1.6.2 | M2 | Apache-2.0; `camera-camera2-pipe` brings Dagger 2.59 (Apache-2.0) at runtime, used internally by CameraX |
 | LiteRT (`litert`, `litert-gpu`) | 1.4.2 | M2 | Apache-2.0 |
 | EfficientDet-Lite0 detection model | Kaggle v1 | M2 | Apache-2.0; trained on COCO 2017 (annotations CC BY 4.0, images under Flickr terms) |
 | UVCAndroid (`com.herohan:UVCAndroid`) | 1.0.13 | M3 | Apache-2.0; bundles libusb (LGPL-2.1), libuvc (BSD), libjpeg-turbo and libyuv (BSD); transitive hutool-core (Mulan PSL v2) |
