@@ -1,0 +1,21 @@
+# Gradle / build
+.gradle/
+.kotlin/
+build/
+local.properties
+captures/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Signing material and keys (scripts/sign-model.sh keeps its private key out of the repo)
+*.jks
+*.keystore
+*.pem
+*.p12
+keys/
+
+# Model binaries are downloaded, not committed
+*.tflite

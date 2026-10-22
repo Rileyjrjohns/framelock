@@ -1,0 +1,199 @@
+# Every version below was read from its official repository metadata on 2026-10-22 (stable only).
+# Prereleases that exist are noted so nobody "upgrades" to them by accident.
+
+[versions]
+# ---------- Toolchain ----------
+# AGP 9.4.1: newest stable (9.5.0-rc01 is a prerelease). Max API 37, min Gradle 9.6.0, JDK 17.
+# Built-in Kotlin is ON: never apply org.jetbrains.kotlin.android (the build fails if you do).
+agp = "9.4.1"
+# Kotlin 2.4.21: newest stable. 2.5.0-Beta2 is a prerelease, and the metadata <release> tag points at it: ignore that tag.
+# kotlinlang lists KGP 2.4.21 as tested up to AGP 9.3.1 / Gradle 9.7.0, so AGP 9.4.1 + Gradle 9.8.2 are newer
+# ("might encounter deprecation warnings"). It must be on the root classpath (buildscript classpath, or the
+# kotlin-jvm plugin applied with `apply false` at the root), otherwise AGP's KGP 2.2.10 floor is used.
+kotlin = "2.4.21"
+# KSP2 has its own version numbers since 2.3.0: it does NOT follow the Kotlin version. 2.3.12 needs AGP >= 8.12.
+ksp = "2.3.12"
+# Not managed by Gradle; read by build-logic. compileSdk/targetSdk = latest stable API (37 = Android 17).
+compileSdk = "37"
+targetSdk = "37"
+minSdk = "29"
+# JDK 17: AGP 9.4 min/default, Gradle 9 daemon minimum, baseline for JUnit 6 / Konsist 0.18 / Spotless.
+jdk = "17"
+
+# ---------- Kotlin libraries ----------
+coroutines = "1.11.0"
+# 1.12.0 is compiled against Kotlin 2.4.10, so it needs Kotlin >= 2.4.10 (fall back to 1.11.0 if Kotlin is ever lowered).
+serialization = "1.12.0"
+
+# ---------- AndroidX ----------
+# BOM 2026.09.00 -> Compose 1.12.1 / material3 1.4.0. The Compose 1.12 libraries declare minCompileSdk=37 and
+# minAndroidGradlePluginVersion=9.1.0 (the release notes say AGP >= 9.2.0). AGP 9.4.1 satisfies both.
+composeBom = "2026.09.00"
+activityCompose = "1.13.0"        # 1.14.0-alpha03 exists (moves to compileSdk 37.1)
+lifecycle = "2.11.0"              # 2.12.0-alpha05 exists; 2.11.0 requires compileSdk 37 + AGP 9.1+
+# androidx.core:core, not core-ktx: since 1.19.0 the KTX APIs live in core and core-ktx is an empty shell.
+androidxCore = "1.19.1"           # requires compileSdk 37 + AGP 9.1+
+# Room 2.x line (androidx.room). Room 3 (androidx.room3 3.0.3) has a different package and API: switching needs an ADR.
+room = "2.8.5"
+work = "2.12.0"                   # raises minSdk to 24, fine for 29
+tracing = "2.0.5"                 # use androidx.tracing:tracing only (tracing-ktx is an empty shell)
+camerax = "1.6.2"                 # 1.7.0-rc01 is a prerelease. minSdk 23, minCompileSdk 36
+profileinstaller = "1.4.1"
+# Benchmark and the Baseline Profile plugin are released together: one version for both.
+benchmark = "1.5.0"
+uiautomator = "2.4.0"
+
+# ---------- AndroidX Test (instrumented, JUnit 4) ----------
+androidxTest = "1.7.0"            # core/runner/rules; 1.8.0-alpha01 exists
+androidxTestExtJunit = "1.3.0"
+androidxTestOrchestrator = "1.6.1"
+junit4 = "4.13.2"                 # EPL-1.0 (JUnit 6 is EPL-2.0): separate line in soup.md
+
+# ---------- JVM tests ----------
+# JUnit 6 is the current stable JUnit. Same Jupiter API; Platform/Jupiter/Vintage share one version.
+# Baseline: Java 17 + Kotlin 2.2 (ADR-007).
+junit = "6.1.3"
+# 0.18.1 is built with kotlin-compiler-embeddable 2.4.21 (= our Kotlin) and needs Java 17. Do not use 0.18.0.
+konsist = "0.18.1"
+
+# ---------- Inference / capture ----------
+# LiteRT 1.4.2 is the latest Interpreter line that still ships GpuDelegate + CompatibilityList.
+# 2.3.0 is newer, but its litert-gpu has NO GpuDelegate (CompiledModel only) and pulls in an alpha Play SDK.
+litert = "1.4.2"
+# UVC fallback: on Maven Central, native libraries 16 KB aligned. Replaces AndroidUSBCamera
+# (its JitPack build is broken and its native libraries are not 16 KB aligned).
+uvcAndroid = "1.0.13"
+
+# ---------- Quality ----------
+ktlint = "1.8.0"                  # pinned explicitly; ktlint's parser embeds Kotlin 2.2.21
+spotless = "8.10.4"
+composeRules = "0.6.8"            # built for ktlint 1.8.0 (its release dependency matrix)
+# detekt 1.23.8 is the only stable detekt. It is built for Kotlin 2.0.21 / Gradle 8.12 / AGP 8.8 and has no
+# support for AGP 9 built-in Kotlin. Apply it ONLY to pure-JVM modules. 2.0.0-alpha.6 is a prerelease.
+detekt = "1.23.8"
+
+[libraries]
+# ---------- Build logic (convention plugins in build-logic/, and the root buildscript classpath) ----------
+android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+compose-gradlePlugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+ksp-gradlePlugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
+room-gradlePlugin = { module = "androidx.room:room-gradle-plugin", version.ref = "room" }
+detekt-gradlePlugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
+
+# ---------- Kotlin ----------
+kotlinx-coroutines-bom = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-bom", version.ref = "coroutines" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core" }       # the only library allowed in :core:*
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android" } # adapters / :app only
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" } # adapters only
+
+# ---------- AndroidX ----------
+androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
+
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui" }
+androidx-compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
+androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+
+androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
+# ADR-001 draws the analysed frame itself (ImageAnalysis only), so no camera-view / camera-compose preview.
+
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }   # room-ktx merged into runtime since 2.7
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" } # ksp(...) only
+androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+
+androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }   # work-runtime-ktx is an empty shell
+androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
+
+androidx-tracing = { module = "androidx.tracing:tracing", version.ref = "tracing" }
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
+androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
+
+# ---------- Instrumented tests (JUnit 4) ----------
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTest" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
+androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTest" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }
+androidx-test-orchestrator = { module = "androidx.test:orchestrator", version.ref = "androidxTestOrchestrator" }
+junit4 = { module = "junit:junit", version.ref = "junit4" }
+
+# ---------- JVM tests (JUnit Platform) ----------
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+# Gradle 9 no longer puts its own launcher on the test runtime classpath: declare it (testRuntimeOnly).
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
+
+# ---------- Inference / capture ----------
+litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
+# Pulls litert-api and litert-gpu-api at exactly [1.4.2]. litert-gpu-api also merges <uses-native-library
+# libOpenCL*.so> into the manifest. Never mix with any 2.x LiteRT artifact.
+litert-gpu = { module = "com.google.ai.edge.litert:litert-gpu", version.ref = "litert" }
+uvc-android = { module = "com.herohan:UVCAndroid", version.ref = "uvcAndroid" }
+
+# ---------- Lint rule sets (resolved by Spotless/ktlint, never on an app classpath) ----------
+compose-rules-ktlint = { module = "io.nlopez.compose.rules:ktlint", version.ref = "composeRules" }
+
+# ---------- Optional: add only after a decision ----------
+# androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version = "2.7.1" }   # only with Room 3 / a bundled driver
+# androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version = "2.10.2" }
+# androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version = "1.2.0" }
+# androidx-benchmark-junit4 = { module = "androidx.benchmark:benchmark-junit4", version.ref = "benchmark" }  # microbenchmarks
+# turbine = { module = "app.cash.turbine:turbine", version = "1.2.1" }   # built against coroutines 1.10.2
+# litert-metadata = { module = "com.google.ai.edge.litert:litert-metadata", version = "2.3.0" }  # no runtime dependency, safe with 1.4.2
+
+[bundles]
+compose = [
+    "androidx-compose-ui",
+    "androidx-compose-ui-graphics",
+    "androidx-compose-foundation",
+    "androidx-compose-material3",
+    "androidx-compose-ui-tooling-preview",
+    "androidx-activity-compose",
+    "androidx-lifecycle-runtime-compose",
+    "androidx-lifecycle-viewmodel-compose",
+]
+compose-debug = ["androidx-compose-ui-tooling", "androidx-compose-ui-test-manifest"]
+camerax = ["androidx-camera-core", "androidx-camera-camera2", "androidx-camera-lifecycle"]
+litert = ["litert", "litert-gpu"]
+# Use together with testImplementation(platform(libs.junit.bom)) and platform(libs.kotlinx.coroutines.bom).
+jvm-test = ["junit-jupiter", "kotlinx-coroutines-test"]
+android-test = [
+    "androidx-test-core",
+    "androidx-test-runner",
+    "androidx-test-rules",
+    "androidx-test-ext-junit",
+    "junit4",
+]
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+android-test = { id = "com.android.test", version.ref = "agp" }            # :benchmark module (M7)
+# No kotlin-android alias on purpose: AGP 9 built-in Kotlin replaces it.
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }   # :core:*, :architecture-tests; also forces KGP on the root classpath
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "room" }                      # served from Google Maven, not the Plugin Portal
+baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }    # pure-JVM modules only
+# Optional (decide in M0 / M7):
+# kover = { id = "org.jetbrains.kotlinx.kover", version = "0.9.11" }
+# dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version = "3.19.2" }
+# versions = { id = "com.github.ben-manes.versions", version = "0.66.0" }
+# Settings plugin (the catalog can't be used in settings plugins {}): org.gradle.toolchains.foojay-resolver-convention 1.0.0
