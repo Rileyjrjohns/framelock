@@ -46,12 +46,59 @@ internal object Rules {
                 listOf("$ROOT_PACKAGE.core.domain.", "$ROOT_PACKAGE.core.testing.", "java.util.concurrent."),
         )
 
-    fun forbiddenReferences(
+    private val ADAPTERS = ADAPTER_MODULES.map { "adapters/$it" }
+
+    private fun List<SourceFile>.production(vararg modules: String) =
+        filter { file -> file.isProduction && modules.any { file.isIn(it) } }
+
+    private fun List<SourceFile>.anySourceSet(vararg modules: String) = filter { file -> modules.any { file.isIn(it) } }
+
+    // Each rule below selects its own scope from all the files it is given, so the fixtures exercise the same
+    // scoping as the repository run.
+
+    fun coreReferencesToAndroid(files: List<SourceFile>): List<String> =
+        forbiddenReferences(files.production(*CORE_MODULES.toTypedArray()), ANDROID_PREFIXES)
+
+    fun referencesToDependencyInjection(files: List<SourceFile>): List<String> =
+        forbiddenReferences(files.anySourceSet(*(CORE_MODULES + ADAPTERS + "app").toTypedArray()), DI_PREFIXES)
+
+    fun coreImportsOutsideAllowlist(files: List<SourceFile>): List<String> =
+        CORE_IMPORT_ALLOWLIST.flatMap { (module, allowed) ->
+            importsOutsideAllowlist(files.production(module), allowed)
+        }
+
+    fun domainReferencesToApplication(files: List<SourceFile>): List<String> =
+        forbiddenReferences(files.production("core/domain"), listOf("$ROOT_PACKAGE.core.application."))
+
+    fun adapterReferencesToOtherAdapters(files: List<SourceFile>): List<String> =
+        ADAPTER_MODULES.flatMap { adapter ->
+            val others =
+                ADAPTER_MODULES.filter { it != adapter }.map {
+                    "$ROOT_PACKAGE.adapters.${it.replace(
+                        '-',
+                        '.',
+                    )}."
+                }
+            forbiddenReferences(files.anySourceSet("adapters/$adapter"), others)
+        }
+
+    fun adapterReferencesToApplication(files: List<SourceFile>): List<String> =
+        forbiddenReferences(files.production(*ADAPTERS.toTypedArray()), listOf("$ROOT_PACKAGE.core.application."))
+
+    /** ADR-002: the inference thread comes from the engine adapter, never from `limitedParallelism`. */
+    fun coreCallsToLimitedParallelism(files: List<SourceFile>): List<String> =
+        files.production(*CORE_MODULES.toTypedArray()).flatMap { file ->
+            val called = Regex("""\blimitedParallelism\s*\(""").containsMatchIn(file.code)
+            val imported = file.imports.any { it.name.endsWith(".limitedParallelism") }
+            if (called || imported) listOf("$file uses limitedParallelism") else emptyList()
+        }
+
+    private fun forbiddenReferences(
         files: List<SourceFile>,
         prefixes: List<String>,
     ): List<String> = files.flatMap { file -> file.referencesTo(prefixes).map { "$file references $it" } }
 
-    fun importsOutsideAllowlist(
+    private fun importsOutsideAllowlist(
         files: List<SourceFile>,
         allowed: List<String>,
     ): List<String> =
@@ -68,14 +115,6 @@ internal object Rules {
                     }
                 }.map { "$file imports ${it.name}${if (it.isWildcard) ".*" else ""}" }
         }
-
-    fun callsToLimitedParallelism(files: List<SourceFile>): List<String> =
-        files
-            .filter {
-                Regex(
-                    """\blimitedParallelism\s*\(""",
-                ).containsMatchIn(it.code)
-            }.map { "$it calls limitedParallelism" }
 
     /**
      * Ports are the non-sealed interfaces declared in [PORT_PACKAGE] (sealed ones, such as `SourceEvent`, are
@@ -116,12 +155,25 @@ internal object Rules {
             }
         restricted.forEach { file ->
             OBJECT_EXPRESSION.findAll(file.code).forEach { match ->
-                val port = index.resolve(match.groupValues[1], file)
-                if (port in ports) violations += "Object expression implements port $port outside adapters ($file)"
+                supertypeNames(match.groupValues[1])
+                    .map { index.resolve(it, file) }
+                    .filter { it in ports }
+                    .forEach { violations += "Object expression implements port $it outside adapters ($file)" }
             }
         }
         return violations
     }
 
-    private val OBJECT_EXPRESSION = Regex("""\bobject\s*:\s*([\w.]+)""")
+    /** `object : A, B(x), C<T> {`: the supertype list of an object expression, up to its body. */
+    private val OBJECT_EXPRESSION = Regex("""\bobject\s*:([^{]+)\{""")
+
+    private fun supertypeNames(list: String): List<String> {
+        var flat = list
+        while (true) {
+            val next = flat.replace(Regex("""\([^()]*\)|<[^<>]*>"""), "")
+            if (next == flat) break
+            flat = next
+        }
+        return flat.split(',').mapNotNull { Regex("""[\w.]+""").find(it)?.value }
+    }
 }
