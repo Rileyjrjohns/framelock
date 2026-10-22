@@ -15,6 +15,14 @@ captures/
 *.keystore
 *.pem
 *.p12
+*.key
+*.der
+*.pk8
+*.p8
+*.priv
+*keystore.properties
+signing.properties
+.env*
 keys/
 
 # Model binaries are downloaded, not committed
