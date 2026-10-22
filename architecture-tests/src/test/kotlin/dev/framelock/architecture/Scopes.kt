@@ -1,36 +1,38 @@
 package dev.framelock.architecture
 
 import com.lemonappdev.konsist.api.Konsist
-import com.lemonappdev.konsist.api.declaration.KoFileDeclaration
 import org.junit.jupiter.api.Assertions.assertTrue
 
-/** Source files of the repository, grouped the way the architecture rules talk about them. */
+/** Source files of the repository, and of the rule fixtures. */
 internal object Scopes {
-    const val ROOT_PACKAGE = "dev.framelock"
-    val CORE_MODULES = listOf("core/domain", "core/application", "core/testing")
-    val ADAPTER_MODULES =
-        listOf("capture-uvc", "capture-camerax", "inference-litert", "model-store", "system", "telemetry")
+    private const val FIXTURES = "architecture-tests/src/test/fixtures"
 
-    private val allFiles: List<KoFileDeclaration> by lazy {
-        Konsist.scopeFromProject().files.filterNot { it.normalizedPath.contains("/build-logic/") }
+    /** Every Kotlin file of the repository, except build-logic and this module (its fixtures break rules on purpose). */
+    val project: List<SourceFile> by lazy {
+        Konsist
+            .scopeFromProject()
+            .files
+            .map(::SourceFile)
+            .filterNot { it.path.contains("/build-logic/") || it.path.contains("/architecture-tests/") }
     }
 
-    /** Main (production) sources of a module given by its directory, e.g. `core/domain`. */
-    fun mainFiles(moduleDir: String): List<KoFileDeclaration> =
-        allFiles.filter { it.normalizedPath.contains("/$moduleDir/src/main/") }.requireNotEmpty(moduleDir)
+    /** Production sources of a module given by its directory, e.g. `core/domain`. Fails if empty. */
+    fun production(moduleDir: String): List<SourceFile> =
+        project.filter { it.isIn(moduleDir) && it.isProduction }.requireNotEmpty(moduleDir)
 
-    /** Every source set of a module: main, test, androidTest. */
-    fun allFiles(moduleDir: String): List<KoFileDeclaration> =
-        allFiles.filter { it.normalizedPath.contains("/$moduleDir/src/") }.requireNotEmpty(moduleDir)
+    /** Every source set of a module. Fails if empty. */
+    fun all(moduleDir: String): List<SourceFile> = project.filter { it.isIn(moduleDir) }.requireNotEmpty(moduleDir)
 
-    fun adapterPackage(adapter: String): String = "$ROOT_PACKAGE.adapters." + adapter.replace('-', '.')
+    fun fixture(name: String): List<SourceFile> =
+        Konsist
+            .scopeFromDirectory("$FIXTURES/$name")
+            .files
+            .map(::SourceFile)
+            .requireNotEmpty("fixture $name")
 
     /** A rule over an empty scope would pass without checking anything. */
-    private fun List<KoFileDeclaration>.requireNotEmpty(moduleDir: String): List<KoFileDeclaration> {
-        assertTrue(isNotEmpty(), "No Kotlin source found for $moduleDir: the rule would check nothing")
+    private fun List<SourceFile>.requireNotEmpty(what: String): List<SourceFile> {
+        assertTrue(isNotEmpty(), "No Kotlin source found for $what: the rule would check nothing")
         return this
     }
-
-    private val KoFileDeclaration.normalizedPath: String
-        get() = path.replace('\\', '/')
 }

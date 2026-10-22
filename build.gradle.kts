@@ -15,7 +15,8 @@ plugins {
 spotless {
     kotlin {
         target("**/src/**/*.kt")
-        targetExclude("**/build/**")
+        // Fixtures break the architecture rules on purpose (star imports, qualified names): not linted.
+        targetExclude("**/build/**", "architecture-tests/src/test/fixtures/**")
         ktlint(libs.versions.ktlint.get()).customRuleSets(
             listOf(
                 libs.compose.rules.ktlint
