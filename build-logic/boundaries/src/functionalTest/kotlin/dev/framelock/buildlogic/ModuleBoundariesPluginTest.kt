@@ -178,6 +178,22 @@ class ModuleBoundariesPluginTest {
     }
 
     @Test
+    fun `DI library brought transitively by a third-party library is allowed outside core`() {
+        writeBuild(":adapters:a" to "implementation(\"org.example:uses-dagger:1.0\")")
+
+        val result = run(expectFailure = false)
+
+        assertTrue(result.output.contains("BUILD SUCCESSFUL"), result.output)
+    }
+
+    @Test
+    fun `DI library brought transitively is refused in core`() {
+        writeBuild(":core:domain" to "implementation(\"org.example:uses-dagger:1.0\")")
+
+        assertViolation("found com.google.dagger:dagger on 'compileClasspath'")
+    }
+
+    @Test
     fun `core module with an extra external library fails`() {
         writeBuild(":core:application" to "implementation(\"org.example:extra:1.0\")")
 
@@ -271,10 +287,17 @@ class ModuleBoundariesPluginTest {
                   <artifactId>$artifact</artifactId>
                   <version>$version</version>
                   <packaging>pom</packaging>
+                  ${dependencyXml("$group:$artifact")}
                 </project>
                 """.trimIndent(),
             )
         }
+    }
+
+    private fun dependencyXml(module: String): String {
+        val (group, artifact, version) = LOCAL_DEPENDENCIES[module]?.split(':') ?: return ""
+        return "<dependencies><dependency><groupId>$group</groupId><artifactId>$artifact</artifactId>" +
+            "<version>$version</version></dependency></dependencies>"
     }
 
     private companion object {
@@ -293,6 +316,11 @@ class ModuleBoundariesPluginTest {
                 Triple("org.example", "extra", "1.0"),
                 Triple("javax.inject", "javax.inject", "1"),
                 Triple("org.jetbrains", "annotations", "26.0.2"),
+                Triple("com.google.dagger", "dagger", "2.59"),
+                Triple("org.example", "uses-dagger", "1.0"),
             )
+
+        /** Dependencies of the local POM-only modules, as `group:artifact:version`. */
+        val LOCAL_DEPENDENCIES = mapOf("org.example:uses-dagger" to "com.google.dagger:dagger:2.59")
     }
 }

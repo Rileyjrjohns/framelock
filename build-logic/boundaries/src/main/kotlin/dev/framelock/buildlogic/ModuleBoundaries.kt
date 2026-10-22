@@ -66,7 +66,10 @@ class ModuleBoundariesPlugin : Plugin<Project> {
         }
     }
 
-    /** Entries `classpath|project|:path`, `classpath|foreign-project|:build:path` or `classpath|module|group:name`. */
+    /**
+     * Entries `classpath|project|:path`, `classpath|foreign-project|:build:path`, and `classpath|module|group:name`
+     * or `classpath|direct-module|group:name` for a library declared by the module itself (a direct edge).
+     */
     private fun reachedComponents(
         classpath: String,
         root: ResolvedComponentResult,
@@ -74,6 +77,11 @@ class ModuleBoundariesPlugin : Plugin<Project> {
         val seen = mutableSetOf<ResolvedComponentResult>()
         val pending = ArrayDeque(listOf(root))
         val entries = sortedSetOf<String>()
+        val direct =
+            root.dependencies
+                .filterIsInstance<ResolvedDependencyResult>()
+                .map { it.selected }
+                .toSet()
         while (pending.isNotEmpty()) {
             val component = pending.removeFirst()
             if (!seen.add(component)) continue
@@ -89,7 +97,8 @@ class ModuleBoundariesPlugin : Plugin<Project> {
                     }
 
                     is ModuleComponentIdentifier -> {
-                        entries += "$classpath|module|${id.group}:${id.module}"
+                        val kind = if (component in direct) "direct-module" else "module"
+                        entries += "$classpath|$kind|${id.group}:${id.module}"
                     }
                 }
             }
@@ -132,9 +141,10 @@ abstract class VerifyModuleBoundaries : DefaultTask() {
                     violations += "$role may not reach $target from another build on '$classpath'"
                 }
 
-                "module" -> {
-                    // Test tooling may bring javax.inject transitively (espresso does); production may not.
-                    if (production && ModuleRole.isDependencyInjection(target)) {
+                "module", "direct-module" -> {
+                    // Only what a module declares itself: libraries may use DI internally (CameraX's
+                    // camera2-pipe depends on Dagger at runtime). Konsist forbids any DI reference in our code.
+                    if (production && kind == "direct-module" && ModuleRole.isDependencyInjection(target)) {
                         violations += "No DI framework or annotation library is allowed: $target on '$classpath'"
                     } else if (role.isCore && production && !ModuleRole.isAllowedInCore(target)) {
                         violations += "$role may only use kotlinx-coroutines-core, found $target on '$classpath'"
