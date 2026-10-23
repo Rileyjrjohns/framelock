@@ -1,7 +1,9 @@
 package dev.framelock.app
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.util.Log
+import androidx.work.WorkManager
 import dev.framelock.kernel.model.ModelVersion
 import dev.framelock.kernel.telemetry.TelemetryEvent
 import dev.framelock.kernel.telemetry.UsageTelemetry
@@ -43,7 +45,15 @@ import dev.framelock.models.ui.ModelsViewModel
 import dev.framelock.telemetry.application.TelemetryRecorder
 import dev.framelock.telemetry.application.TrackScreen
 import dev.framelock.telemetry.application.TrackUiInteraction
+import dev.framelock.telemetry.domain.port.TelemetrySink
 import dev.framelock.telemetry.room.LogcatTelemetrySink
+import dev.framelock.telemetry.room.LoggingUploader
+import dev.framelock.telemetry.room.RoomTelemetryBuffer
+import dev.framelock.telemetry.room.RoomTelemetrySink
+import dev.framelock.telemetry.room.TeeTelemetrySink
+import dev.framelock.telemetry.room.TelemetryUploadRun
+import dev.framelock.telemetry.room.TelemetryUploadScheduler
+import dev.framelock.telemetry.room.TelemetryWorkerFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,6 +64,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.InputStream
+import java.time.Duration
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -69,7 +80,37 @@ class AppGraph(
     private val clock = AndroidClock()
     private val tracer = AndroidTracer()
 
-    private val recorder = TelemetryRecorder(LogcatTelemetrySink())
+    private val appContext = context.applicationContext
+    private val debuggable = appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+
+    // Telemetry (ADR-004, M6): a capped Room buffer written off the caller's thread, uploaded in batches by WorkManager.
+    private val telemetryBuffer =
+        RoomTelemetryBuffer.open(
+            appContext,
+            onDropped = { Log.w(TELEMETRY_TAG, "Buffer full: the $it oldest events were dropped") },
+        )
+    private val roomSink: TelemetrySink =
+        RoomTelemetrySink(
+            telemetryBuffer,
+            CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            System::currentTimeMillis,
+            { Log.w(TELEMETRY_TAG, it) },
+        )
+
+    // Debug builds also log every event, so a device check can follow them in Logcat.
+    private val telemetrySink: TelemetrySink =
+        if (debuggable) TeeTelemetrySink(roomSink, LogcatTelemetrySink()) else roomSink
+
+    /** The factory for `TelemetryUploadWorker`: WorkManager's default initializer is off (manual DI). */
+    val workerFactory =
+        TelemetryWorkerFactory(
+            TelemetryUploadRun(
+                telemetryBuffer,
+                LoggingUploader({ Log.i(UPLOAD_TAG, it) }, firstEvents = if (debuggable) DEBUG_LOGGED_EVENTS else 0),
+                log = { Log.w(UPLOAD_TAG, it) },
+            ),
+        )
+    private val recorder = TelemetryRecorder(telemetrySink)
     private val record: (TelemetryEvent) -> Unit = recorder::record
     private val trackUi = TrackUiInteraction(recorder)
     val trackScreen = TrackScreen(recorder)
@@ -78,7 +119,6 @@ class AppGraph(
 
     // One sequence for every source: the pipeline refuses a session id that does not increase (ADR-016).
     private val sessionIds = SessionIdSequence()
-    private val appContext = context.applicationContext
     private val labels =
         SourceLabels(
             auto = context.getString(R.string.source_auto),
@@ -173,6 +213,18 @@ class AppGraph(
         scope.launch(Dispatchers.IO) { startUpModels() }
     }
 
+    /**
+     * Schedules the periodic telemetry upload (kept if already scheduled) and, in debug builds, one upload shortly after
+     * start. Called once the application is ready to give WorkManager its configuration, never from this constructor.
+     */
+    fun scheduleTelemetryUpload() {
+        scope.launch(Dispatchers.IO) {
+            val scheduler = TelemetryUploadScheduler(WorkManager.getInstance(appContext))
+            scheduler.schedulePeriodic()
+            if (debuggable) scheduler.enqueueOnce(DEBUG_UPLOAD_DELAY)
+        }
+    }
+
     private fun swapAllowed(state: PipelineUiState): Boolean =
         ModelSwapPolicy.decide(state.state) == SwapDecision.Allowed
 
@@ -248,6 +300,10 @@ class AppGraph(
 
     private companion object {
         const val TAG = "AppGraph"
+        const val TELEMETRY_TAG = "TelemetryBuffer"
+        const val UPLOAD_TAG = "TelemetryUpload"
+        const val DEBUG_LOGGED_EVENTS = 5
+        val DEBUG_UPLOAD_DELAY: Duration = Duration.ofSeconds(20)
         const val BUNDLED_DIRECTORY = "models"
         const val PACKAGE_SUFFIX = ".flmodel"
         val RECONNECT_BASE = 500.milliseconds
