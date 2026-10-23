@@ -29,16 +29,23 @@ class CaptureModeSelectorTest {
     }
 
     @Test
-    fun `MJPEG at its highest rate is chosen when YUYV stays below 30 fps`() {
+    fun `MJPEG at the lowest rate that reaches 30 fps is chosen when YUYV stays below 30 fps`() {
         val chosen =
             selector.select(
                 listOf(
                     mode(CaptureFormat.YUYV, 1280, 720, 10, 5),
-                    mode(CaptureFormat.MJPEG, 1280, 720, 30, 60),
+                    mode(CaptureFormat.MJPEG, 1280, 720, 60, 30, 24),
                 ),
             )
 
-        assertEquals(CaptureMode(CaptureFormat.MJPEG, 1280, 720, 60), chosen)
+        assertEquals(CaptureMode(CaptureFormat.MJPEG, 1280, 720, 30), chosen)
+    }
+
+    @Test
+    fun `MJPEG below 30 fps is used at its highest rate`() {
+        val chosen = selector.select(listOf(mode(CaptureFormat.MJPEG, 1280, 720, 15, 24, 10)))
+
+        assertEquals(CaptureMode(CaptureFormat.MJPEG, 1280, 720, 24), chosen)
     }
 
     @Test

@@ -27,17 +27,19 @@ internal data class CaptureMode(
  * 1. Size: the offered size closest to the target (1280x720 by default) by pixel count; a tie goes to the larger size.
  *    The size is chosen before the format: the model input is small, a larger frame only adds copy and conversion cost.
  * 2. Format at that size:
- *    - YUYV if it reaches [minYuyvFps] (no JPEG to decode), at the lowest rate that does: the pipeline conflates
- *      frames anyway, so a faster stream only costs USB bandwidth and conversion time;
- *    - otherwise MJPEG at its highest rate;
- *    - otherwise YUYV at its highest rate.
+ *    - YUYV if it reaches [minFps] (no JPEG to decode);
+ *    - otherwise MJPEG if it reaches [minFps];
+ *    - otherwise MJPEG, then YUYV, at its highest rate.
+ *
+ *    A format that reaches [minFps] streams at the lowest rate that does: the pipeline conflates frames anyway, so a
+ *    faster stream only costs USB bandwidth, JPEG decoding and conversion time.
  *
  * Modes with no frame rate are ignored. Returns null when nothing is usable.
  */
 internal class CaptureModeSelector(
     private val targetWidth: Int = DEFAULT_WIDTH,
     private val targetHeight: Int = DEFAULT_HEIGHT,
-    private val minYuyvFps: Int = DEFAULT_MIN_YUYV_FPS,
+    private val minFps: Int = DEFAULT_MIN_FPS,
 ) {
     init {
         require(
@@ -57,32 +59,29 @@ internal class CaptureModeSelector(
                         .thenByDescending { it.first.toLong() * it.second },
                 ) ?: return null
         val atSize = usable.filter { it.width == size.first && it.height == size.second }
-        return yuyv(atSize, lowestReaching = minYuyvFps) ?: mjpeg(atSize) ?: yuyv(atSize, lowestReaching = 0)
+        return pick(atSize, CaptureFormat.YUYV, lowestReaching = minFps)
+            ?: pick(atSize, CaptureFormat.MJPEG, lowestReaching = minFps)
+            ?: pick(atSize, CaptureFormat.MJPEG, lowestReaching = 0)
+            ?: pick(atSize, CaptureFormat.YUYV, lowestReaching = 0)
     }
 
-    private fun yuyv(
+    /** [format] at the lowest rate reaching [lowestReaching], or at its highest rate when [lowestReaching] is 0. */
+    private fun pick(
         modes: List<SupportedMode>,
+        format: CaptureFormat,
         lowestReaching: Int,
     ): CaptureMode? {
-        val offered = modes.filter { it.format == CaptureFormat.YUYV }
+        val offered = modes.filter { it.format == format }
+        val rates = offered.flatMap { it.fps }
         val fps =
-            if (lowestReaching > 0) {
-                offered.flatMap { it.fps }.filter { it >= lowestReaching }.minOrNull()
-            } else {
-                offered.flatMap { it.fps }.maxOrNull()
-            } ?: return null
-        return CaptureMode(CaptureFormat.YUYV, offered.first().width, offered.first().height, fps)
-    }
-
-    private fun mjpeg(modes: List<SupportedMode>): CaptureMode? {
-        val offered = modes.filter { it.format == CaptureFormat.MJPEG }
-        val fps = offered.flatMap { it.fps }.maxOrNull() ?: return null
-        return CaptureMode(CaptureFormat.MJPEG, offered.first().width, offered.first().height, fps)
+            (if (lowestReaching > 0) rates.filter { it >= lowestReaching }.minOrNull() else rates.maxOrNull())
+                ?: return null
+        return CaptureMode(format, offered.first().width, offered.first().height, fps)
     }
 
     private companion object {
         const val DEFAULT_WIDTH = 1280
         const val DEFAULT_HEIGHT = 720
-        const val DEFAULT_MIN_YUYV_FPS = 30
+        const val DEFAULT_MIN_FPS = 30
     }
 }
