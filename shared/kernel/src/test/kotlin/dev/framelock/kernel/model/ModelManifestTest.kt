@@ -30,7 +30,7 @@ class ModelManifestTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["", " ", "v 1", "v/1", "é"])
+    @ValueSource(strings = ["", " ", "v 1", "v/1", "é", ".", ".."])
     fun `model version outside the bounded token charset is rejected`(value: String) {
         assertThrows<IllegalArgumentException> { ModelVersion(value) }
     }

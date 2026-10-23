@@ -10,7 +10,8 @@ value class ModelVersion(
     }
 
     private companion object {
-        val PATTERN = Regex("[A-Za-z0-9._-]{1,64}")
+        /** A bounded token that is not "." or "..": versions name directories in the model store (ADR-003). */
+        val PATTERN = Regex("(?!\\.{1,2}$)[A-Za-z0-9._-]{1,64}")
     }
 }
 
