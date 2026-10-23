@@ -18,11 +18,20 @@ import dev.framelock.live.domain.port.ThermalMonitor
 import dev.framelock.live.domain.system.DeviceSnapshot
 import dev.framelock.live.domain.system.MemoryPressure
 import dev.framelock.live.domain.system.ThermalLevel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /** ADR-011: the realtime base, the same as camera timestamps on most devices. */
 class AndroidClock : Clock {
@@ -36,27 +45,69 @@ class AndroidTracer : Tracer {
     override fun end() = Trace.endSection()
 }
 
-/** The thermal status listener (API 29+): the current status first, then every change. */
+/**
+ * The thermal level, the worse of two signals (ADR-017):
+ *
+ * - the thermal status listener (API 29+): the current status first, then every change;
+ * - from API 30, the forecast headroom (`getThermalHeadroom`, [FORECAST]) polled every [HEADROOM_INTERVAL] and mapped
+ *   by [HeadroomLevels], so the pipeline slows down before the platform throttles.
+ *
+ * Both run only while the flow is collected. On API 29 only the listener is used.
+ */
 class PowerManagerThermalMonitor(
     private val context: Context,
 ) : ThermalMonitor {
     override val level: Flow<ThermalLevel> =
-        callbackFlow {
+        flow {
             val power = checkNotNull(context.getSystemService(PowerManager::class.java)) { "No PowerManager" }
+            val statuses = statusLevels(power)
+            val headroom =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    headroomLevels(HEADROOM_INTERVAL) { power.getThermalHeadroom(FORECAST_SECONDS) }
+                } else {
+                    flowOf(ThermalLevel.NONE)
+                }
+            emitAll(combine(statuses, headroom, ::worseOf))
+        }.distinctUntilChanged()
+
+    private fun statusLevels(power: PowerManager): Flow<ThermalLevel> =
+        callbackFlow {
             val listener = PowerManager.OnThermalStatusChangedListener { trySend(ThermalLevels.of(it)) }
             trySend(ThermalLevels.of(power.currentThermalStatus))
             power.addThermalStatusListener(ContextCompat.getMainExecutor(context), listener)
             awaitClose { power.removeThermalStatusListener(listener) }
-        }.distinctUntilChanged()
+        }
+
+    companion object {
+        /** The platform advises against calling more than about once per second. */
+        val HEADROOM_INTERVAL: Duration = 2.seconds
+
+        /** Far enough ahead to act on, near enough to stay accurate; the allowed range is 0..60 s. */
+        const val FORECAST_SECONDS = 10
+    }
 }
 
-/**
- * Memory pressure is not observed yet: M4 adds `onTrimMemory` (checking which levels API 34+ still delivers) and
- * `ActivityManager.MemoryInfo` polling. Until then the pipeline sees NORMAL.
- */
-class NotYetObservedMemoryPressure : MemoryPressureMonitor {
-    override val pressure: Flow<MemoryPressure> = MutableStateFlow(MemoryPressure.NORMAL)
+/** One subscription to [upstream] for every collector (the pipeline and the debug HUD), kept while any is collecting. */
+class SharedThermalMonitor(
+    upstream: ThermalMonitor,
+    scope: CoroutineScope,
+) : ThermalMonitor {
+    val state: StateFlow<ThermalLevel> =
+        upstream.level.stateIn(scope, SharingStarted.WhileSubscribed(KEEP_ALIVE_MS), ThermalLevel.NONE)
+    override val level: Flow<ThermalLevel> = state
 }
+
+/** One subscription to [upstream] for every collector (the pipeline and the debug HUD), kept while any is collecting. */
+class SharedMemoryPressureMonitor(
+    upstream: MemoryPressureMonitor,
+    scope: CoroutineScope,
+) : MemoryPressureMonitor {
+    val state: StateFlow<MemoryPressure> =
+        upstream.pressure.stateIn(scope, SharingStarted.WhileSubscribed(KEEP_ALIVE_MS), MemoryPressure.NORMAL)
+    override val pressure: Flow<MemoryPressure> = state
+}
+
+private const val KEEP_ALIVE_MS = 5_000L
 
 /** Device model, OS version and battery from the sticky battery intent (temperature in tenths of °C). */
 class AndroidDeviceInfoProvider(
