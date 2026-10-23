@@ -202,7 +202,8 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
 
 - Live screen: video with overlay, plus a large status banner (Running / No signal / Degraded: thermal / Model vX).
 - Built for a two-second glance and imprecise touch: touch targets ≥ 64 dp, WCAG AA contrast at least, no critical action behind a small tap, no gesture-only actions.
-- Debug HUD (toggle): input fps, inference fps, inference ms, e2e ms, thermal level, dropped frames.
+- Source picker (button in the controls row, enabled only while stopped; a change applies at the next start): Auto, back, front, external camera, each attached UVC device.
+- Debug HUD (toggle): active source and, for UVC, capture mode; input fps, inference fps, inference ms, e2e ms, thermal level, dropped frames.
 - Models screen: list, activate, rollback, disabled whenever `ModelSwapPolicy` says no.
 - Bitmaps reused (double buffer): no allocation per frame.
 - `Modifier.track(ElementId)` routes clicks to `TrackUiInteraction`.

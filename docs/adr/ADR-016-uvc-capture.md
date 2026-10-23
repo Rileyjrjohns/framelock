@@ -39,13 +39,15 @@ library. Several choices depend on what that library does, which was read in its
   itself with `UsbManager.requestPermission`, an explicit intent (`setPackage`), `FLAG_MUTABLE` as the system fills
   the extras, and a receiver that is not exported. Once granted, it calls `USBMonitor.requestPermission`, which finds
   the permission and opens the device. The exported receiver stays a library behaviour, recorded here, not hidden.
-- **Which device.** The first attached UVC device, by name: the device class or one of its interfaces is video
+- **Which device.** The selected UVC device, else (Auto) the first attached one, by name: the device class or one of its interfaces is video
   (0x0E). The manifest also declares a `USB_DEVICE_ATTACHED` filter for that class, so Android can grant the
   permission by default when the user plugs the card in (`launchMode="singleTop"` keeps one activity).
 - **Capture mode (`CaptureModeSelector`, pure).** Size first: the offered size closest to 1280x720 by pixel count (a
   tie goes to the larger). Then at that size: YUYV at the lowest rate that reaches 30 fps (no JPEG to decode; a faster
-  stream only costs bandwidth, since the pipeline conflates frames); else MJPEG at its highest rate; else YUYV at its
-  highest rate. The library treats every uncompressed format as YUYV: a card offering only NV12 would be mislabeled.
+  stream only costs bandwidth, since the pipeline conflates frames); else MJPEG at the lowest rate reaching 30 fps (a
+  60 fps stream would only add JPEG decoding: on a test webcam the pipeline analysed about 14 frames per second); else
+  MJPEG, then YUYV, at its highest rate. The library treats every uncompressed format as YUYV: a card offering only
+  NV12 would be mislabeled.
   The chosen mode and the offered ones are logged once per stream (`Log.i`, tag `UvcFrameSource`): this is the M3
   capture-format measurement. Input fps is on the HUD.
 - **No-signal watchdog (`FrameWatchdog`, pure, `Clock` port).** The library cannot tell that the HDMI input is
@@ -58,9 +60,22 @@ library. Several choices depend on what that library does, which was read in its
   down the previous stream first, since the pipeline's reconnection calls `open()` again without `close()`. All
   library calls run on one `HandlerThread` owned by the source, except the frame callback, which runs on the
   library's native thread.
-- **Source selection (`SelectingFrameSource`, in `:app`).** Only `:app` sees every adapter. It chooses when a session
-  opens: an external camera exposed by Camera2, else an attached UVC device, else the back camera. The choice stays
-  until `close()`, so reconnections reach the same source. Its `events` merge those of the three sources.
+- **Source selection (`SelectingFrameSource`, in `:app`).** Only `:app` sees every adapter. It forwards to one of four
+  sources (external CameraX lens, UVC, back camera, front camera), chosen when a session opens from the user's choice
+  (`SourceSelection`). `Auto`, the default, keeps the order: an external camera exposed by Camera2, else an attached
+  UVC device, else the back camera. An explicit choice opens that source; for UVC it names the device, which
+  `UvcFrameSource` reads through an injected `selectedDeviceId` provider (absent at open: `Disconnected(DEVICE_DETACHED)`,
+  retried as before). The choice stays until `close()`, so reconnections reach the same source and a new choice applies
+  at the next start; the picker is enabled only while the pipeline is idle. Its `events` merge those of the four sources.
+- **Device identity.** The picker lists UVC devices afresh each time it opens, labelled with `UsbDevice.productName`,
+  else `manufacturerName`, else "USB video device". The id is `vendorId:productId` in hex. The serial number would
+  separate identical units, but `UsbDevice.getSerialNumber()` throws `SecurityException` for an app targeting API 29+
+  without permission on the device (https://developer.android.com/reference/android/hardware/usb/UsbDevice#getSerialNumber()),
+  and the list is shown before any permission is asked. Identical units therefore get `#2`, `#3` suffixes in
+  device-name order; which physical unit holds the plain id can change after a re-plug.
+- **Active source in the HUD.** `SelectingFrameSource.activeDescription` (a `StateFlow<String?>`) gives the chosen
+  camera's label or, for UVC, `UvcFrameSource.description` (`<device> · <format> <w>x<h>@<fps>`, set where the mode is
+  logged, cleared when the stream ends). UI text only, built once per stream; it never reaches telemetry (TEL-2).
 - **Amendment to ADR-006 (ports).** The Konsist rule allowed no port implementation in `:app`. A source that chooses
   among adapters can only live there, since adapters never see each other. The rule now lists the composites the app
   may host (`Rules.APP_COMPOSITES`: `SelectingFrameSource` implements `FrameSource`); any other port implementation
