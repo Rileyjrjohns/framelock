@@ -1,10 +1,13 @@
 package dev.framelock.app
 
 import android.content.Context
+import android.util.Log
+import dev.framelock.kernel.model.ModelVersion
 import dev.framelock.kernel.telemetry.TelemetryEvent
 import dev.framelock.kernel.telemetry.UsageTelemetry
 import dev.framelock.live.application.metrics.MetricsAggregator
 import dev.framelock.live.application.pipeline.InferencePipeline
+import dev.framelock.live.application.pipeline.PipelineUiState
 import dev.framelock.live.application.usecase.ObservePipeline
 import dev.framelock.live.application.usecase.ReportFrameRendered
 import dev.framelock.live.application.usecase.StartPipeline
@@ -26,6 +29,17 @@ import dev.framelock.live.system.PowerManagerThermalMonitor
 import dev.framelock.live.system.SharedMemoryPressureMonitor
 import dev.framelock.live.system.SharedThermalMonitor
 import dev.framelock.live.ui.LiveViewModel
+import dev.framelock.models.application.ActivateModel
+import dev.framelock.models.application.ImportModel
+import dev.framelock.models.application.ModelChangeResult
+import dev.framelock.models.application.RollbackModel
+import dev.framelock.models.domain.ModelSource
+import dev.framelock.models.domain.policy.ModelSwapPolicy
+import dev.framelock.models.domain.policy.SwapDecision
+import dev.framelock.models.store.FileAuditLog
+import dev.framelock.models.store.FileModelRepository
+import dev.framelock.models.ui.ModelRow
+import dev.framelock.models.ui.ModelsViewModel
 import dev.framelock.telemetry.application.TelemetryRecorder
 import dev.framelock.telemetry.application.TrackScreen
 import dev.framelock.telemetry.application.TrackUiInteraction
@@ -33,7 +47,13 @@ import dev.framelock.telemetry.room.LogcatTelemetrySink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.InputStream
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -54,7 +74,6 @@ class AppGraph(
     private val trackUi = TrackUiInteraction(recorder)
     val trackScreen = TrackScreen(recorder)
 
-    private val developmentModel = DevelopmentModel(context.applicationContext)
     private val metrics = MetricsAggregator(clock, record)
 
     // One sequence for every source: the pipeline refuses a session id that does not increase (ADR-016).
@@ -121,14 +140,82 @@ class AppGraph(
                 ),
             scope = scope,
         )
-    private val start = StartPipeline(pipeline, developmentModel::artifact, AndroidDeviceInfoProvider(context), record)
+
+    // Model store (ADR-003): verified imports, pointers on disk, audit trail. Keys come from assets/keys.
+    private val modelRepository =
+        FileModelRepository(
+            appContext.filesDir,
+            TrustedKeyAssets.load(appContext.assets) { name, error -> Log.w(TAG, "Trusted key $name ignored", error) },
+        )
+    private val auditLog = FileAuditLog(appContext.filesDir)
+    private val importModel = ImportModel(pipeline, modelRepository, auditLog, record, clock)
+    private val activateModel = ActivateModel(pipeline, modelRepository, auditLog, record, clock)
+    private val rollbackModel = RollbackModel(pipeline, modelRepository, auditLog, record, clock)
+    private val activeLabels =
+        ActiveLabels(
+            activeVersion = { modelRepository.active()?.manifest?.version },
+            read = modelRepository::labels,
+            onUnreadable = { Log.w(TAG, "Labels unreadable; the overlay shows class numbers", it) },
+        )
+
+    /** A model swap or import is allowed (`ModelSwapPolicy`): no session is connected. */
+    private val canSwap: StateFlow<Boolean> =
+        pipeline.state
+            .map(::swapAllowed)
+            .stateIn(scope, SharingStarted.Eagerly, swapAllowed(pipeline.state.value))
+    private val start = StartPipeline(pipeline, modelRepository::active, AndroidDeviceInfoProvider(context), record)
     private val stop = StopPipeline(pipeline)
     private val observe = ObservePipeline(pipeline, metrics)
     private val reportRendered = ReportFrameRendered(metrics)
 
     init {
         record(UsageTelemetry.AppSession)
-        scope.launch(Dispatchers.IO) { developmentModel.install() }
+        scope.launch(Dispatchers.IO) { startUpModels() }
+    }
+
+    private fun swapAllowed(state: PipelineUiState): Boolean =
+        ModelSwapPolicy.decide(state.state) == SwapDecision.Allowed
+
+    /** Reads the labels of the model left active by the last run, then installs the bundled package if there is none. */
+    private suspend fun startUpModels() {
+        activeLabels.refresh()
+        val bootstrap =
+            ModelBootstrap(
+                hasActiveModel = { modelRepository.active() != null },
+                bundledPackage = ::bundledPackage,
+                import = importModel::invoke,
+                activate = activateModel::invoke,
+            )
+        val result = bootstrap.run()
+        if (result is BootstrapResult.Refused) Log.w(TAG, "The bundled model was not installed: ${result.reason}")
+        activeLabels.refresh()
+    }
+
+    /** The package of a debug build (`scripts/fetch-model.sh`); a release build has none. */
+    private fun bundledPackage(): ModelSource? {
+        val name =
+            appContext.assets
+                .list(BUNDLED_DIRECTORY)
+                .orEmpty()
+                .firstOrNull { it.endsWith(PACKAGE_SUFFIX) } ?: return null
+        return object : ModelSource {
+            override val displayName = name
+
+            override fun open(): InputStream = appContext.assets.open("$BUNDLED_DIRECTORY/$name")
+        }
+    }
+
+    private suspend fun listModelRows(): List<ModelRow> =
+        withContext(Dispatchers.IO) {
+            val active = modelRepository.active()?.manifest?.version
+            val previous = modelRepository.previous()?.manifest?.version
+            modelRepository.list().map { ModelRow(it.version, it.version == active, it.version == previous) }
+        }
+
+    /** The overlay's class names follow the model the swap just made active. */
+    private suspend fun refreshLabelsAfter(result: ModelChangeResult): ModelChangeResult {
+        if (result is ModelChangeResult.Changed) withContext(Dispatchers.IO) { activeLabels.refresh() }
+        return result
     }
 
     fun liveViewModel(): LiveViewModel =
@@ -139,7 +226,7 @@ class AppGraph(
             reportRendered = reportRendered,
             display = pipeline.display,
             clock = clock,
-            labelOf = developmentModel::labelOf,
+            labelOf = activeLabels::labelOf,
             track = { trackUi(it) },
             listSources = sourceSelection::options,
             chooseSource = sourceSelection::select,
@@ -149,7 +236,20 @@ class AppGraph(
             memory = memory.state,
         )
 
+    fun modelsViewModel(): ModelsViewModel =
+        ModelsViewModel(
+            listModels = ::listModelRows,
+            importModel = importModel::invoke,
+            activateModel = { version: ModelVersion -> refreshLabelsAfter(activateModel(version)) },
+            rollbackModel = { refreshLabelsAfter(rollbackModel()) },
+            canSwap = canSwap,
+            track = { trackUi(it) },
+        )
+
     private companion object {
+        const val TAG = "AppGraph"
+        const val BUNDLED_DIRECTORY = "models"
+        const val PACKAGE_SUFFIX = ".flmodel"
         val RECONNECT_BASE = 500.milliseconds
         val RECONNECT_MAX = 10.seconds
         const val RECONNECT_JITTER = 0.2

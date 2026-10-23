@@ -58,6 +58,7 @@ private val TouchTarget = 64.dp
 @Composable
 fun LiveScreen(
     viewModel: LiveViewModel,
+    onOpenModels: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val ui by viewModel.state.collectAsStateWithLifecycle()
@@ -86,6 +87,7 @@ fun LiveScreen(
             onStart = viewModel::start,
             onStop = viewModel::stop,
             onToggleHud = viewModel::toggleHud,
+            onOpenModels = onOpenModels,
             onTrack = viewModel.track,
         )
     }
@@ -232,6 +234,7 @@ private fun Controls(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleHud: () -> Unit,
+    onOpenModels: () -> Unit,
     onTrack: (ElementId) -> Unit,
 ) {
     // Two rows: three buttons side by side do not fit a phone in portrait.
@@ -248,6 +251,10 @@ private fun Controls(
             )
             OutlinedButton(onToggleHud, Modifier.heightIn(min = TouchTarget).track(ElementId.TOGGLE_HUD, onTrack)) {
                 Text(stringResource(R.string.action_hud), color = MaterialTheme.colorScheme.onPrimary)
+            }
+            // Opening a screen is navigation, not an interaction of the allowlist (ElementId): the screen view is tracked.
+            OutlinedButton(onOpenModels, Modifier.heightIn(min = TouchTarget)) {
+                Text(stringResource(R.string.action_models), color = MaterialTheme.colorScheme.onPrimary)
             }
         }
         if (running) {

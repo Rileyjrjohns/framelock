@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,23 +36,40 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.framelock.kernel.telemetry.ScreenId
 import dev.framelock.live.ui.LiveScreen
 import dev.framelock.live.ui.LiveViewModel
+import dev.framelock.models.ui.ModelsScreen
+import dev.framelock.models.ui.ModelsViewModel
 
 class MainActivity : ComponentActivity() {
     private val graph by lazy { (application as FramelockApplication).graph }
     private val liveViewModel: LiveViewModel by viewModels {
         viewModelFactory { initializer { graph.liveViewModel() } }
     }
+    private val modelsViewModel: ModelsViewModel by viewModels {
+        viewModelFactory { initializer { graph.modelsViewModel() } }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
-                Surface(Modifier.fillMaxSize()) {
-                    CameraPermissionGate {
-                        LaunchedEffect(Unit) { graph.trackScreen(ScreenId.LIVE) }
-                        LiveScreen(liveViewModel)
-                    }
-                }
+                Surface(Modifier.fillMaxSize()) { Navigation() }
+            }
+        }
+    }
+
+    /** Two screens, no navigation library: system back leaves Models for Live. */
+    @Composable
+    private fun Navigation() {
+        var screen by rememberSaveable { mutableStateOf(ScreenId.LIVE) }
+        LaunchedEffect(screen) { graph.trackScreen(screen) }
+        BackHandler(enabled = screen == ScreenId.MODELS) { screen = ScreenId.LIVE }
+        when (screen) {
+            ScreenId.LIVE -> {
+                CameraPermissionGate { LiveScreen(liveViewModel, onOpenModels = { screen = ScreenId.MODELS }) }
+            }
+
+            ScreenId.MODELS -> {
+                ModelsScreen(modelsViewModel, onBack = { screen = ScreenId.LIVE })
             }
         }
     }
