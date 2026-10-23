@@ -35,6 +35,9 @@ import dev.framelock.live.domain.port.SourceEvent
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -52,8 +55,8 @@ import kotlin.time.Duration.Companion.seconds
  *
  * - Every library call runs on one `HandlerThread` this source owns, created by [open] and ended by [close]. The frame
  *   callback is the exception: the library calls it on its native capture thread.
- * - [open] picks the first attached UVC device and asks for the USB permission. Nothing attached gives
- *   `Disconnected(DEVICE_DETACHED)`; a refusal gives `PERMISSION_DENIED`; a negotiation or open error gives
+ * - [open] picks the device named by [selectedDeviceId] (the first attached UVC device when it gives null) and asks for
+ *   the USB permission. No such device attached gives `Disconnected(DEVICE_DETACHED)`; a refusal gives `PERMISSION_DENIED`; a negotiation or open error gives
  *   `OPEN_FAILED`. The pipeline's reconnection calls [open] again after any of them (except a refusal): [open] first
  *   tears down whatever the previous call left, so it can be called without [close] in between.
  * - The mode (format, size, rate) is chosen by [CaptureModeSelector] and logged once per stream, which is the M3
@@ -71,7 +74,12 @@ import kotlin.time.Duration.Companion.seconds
  * - Any end of a stream tears everything down: callback cleared, preview stopped, camera closed and destroyed, monitor
  *   unregistered and destroyed. A full teardown also mitigates the library's issue 134 (no frames after re-opening on
  *   Android 16).
+ * - [description] names the device and the negotiated mode (`USB HD Webcam · MJPEG 1280x720@30`) from the moment the
+ *   mode is chosen until the stream ends. It is built once per stream, never per frame, and is UI text only.
  * - Events that are never collected are released: the channel closes their buffers.
+ *
+ * [selectedDeviceId] is called on the UVC thread at each [open]; it must be thread-safe (read a volatile or a
+ * `StateFlow`). A reconnection calls [open] again, so it reaches the same device while the selection does not change.
  */
 class UvcFrameSource(
     private val context: Context,
@@ -82,12 +90,18 @@ class UvcFrameSource(
     targetHeight: Int = DEFAULT_HEIGHT,
     private val signalTimeout: Duration = 2.seconds,
     private val startTimeout: Duration = 5.seconds,
+    private val selectedDeviceId: () -> String? = { null },
 ) : FrameSource {
     private val channel =
         Channel<SourceEvent>(Channel.UNLIMITED) { event ->
             if (event is SourceEvent.FrameAvailable) event.frame.image.close()
         }
     override val events: Flow<SourceEvent> = channel.receiveAsFlow()
+
+    private val activeDescription = MutableStateFlow<String?>(null)
+
+    /** The active device and capture mode, null when no stream is live. */
+    val description: StateFlow<String?> = activeDescription.asStateFlow()
 
     private val selector = CaptureModeSelector(targetWidth, targetHeight)
     private val usbManager = context.getSystemService(UsbManager::class.java)
@@ -107,11 +121,11 @@ class UvcFrameSource(
             val target = handler ?: startThread()
             target.call {
                 current?.end(null)
-                val device = UvcDevices.firstAttached(context)
-                if (device == null) {
+                val found = UvcDevices.findWithInfo(context, selectedDeviceId())
+                if (found == null) {
                     channel.trySend(SourceEvent.Disconnected(DisconnectReason.DEVICE_DETACHED))
                 } else {
-                    Stream(target, device).also { current = it }.begin()
+                    Stream(target, found.first, found.second.label).also { current = it }.begin()
                 }
             }
         }
@@ -161,6 +175,7 @@ class UvcFrameSource(
     private inner class Stream(
         private val handler: Handler,
         private val device: UsbDevice,
+        private val deviceLabel: String,
     ) : USBMonitor.OnDeviceConnectListener,
         IFrameCallback {
         private val monitor = USBMonitor(context, this, handler)
@@ -293,6 +308,7 @@ class UvcFrameSource(
                 return
             }
             Log.i(TAG, "Capture mode: ${mode.format} ${mode.width}x${mode.height}@${mode.fps} (offered: $offered)")
+            activeDescription.value = describeCapture(deviceLabel, mode)
             val images = ImageReader.newInstance(mode.width, mode.height, PixelFormat.RGBA_8888, READER_IMAGES)
             images.setOnImageAvailableListener({ it.acquireLatestImage()?.close() }, handler)
             reader = images
@@ -349,7 +365,7 @@ class UvcFrameSource(
 
         /** Why a silent stream is over: the device may simply be gone, without the library having said so yet. */
         private fun lostReason(): DisconnectReason =
-            if (UvcDevices.firstAttached(context) == null) {
+            if (!UvcDevices.isStillAttached(context, device)) {
                 DisconnectReason.DEVICE_DETACHED
             } else {
                 DisconnectReason.SIGNAL_LOST
@@ -363,6 +379,7 @@ class UvcFrameSource(
             if (ended) return
             ended = true
             live = false
+            activeDescription.value = null
             watchdog.stop()
             handler.removeCallbacks(checkWatchdog)
             release()

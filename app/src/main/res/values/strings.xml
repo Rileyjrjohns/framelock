@@ -3,4 +3,8 @@
     <string name="app_name">Framelock</string>
     <string name="camera_permission_needed">The camera is needed to analyse the video feed.</string>
     <string name="camera_permission_grant">Allow camera</string>
+    <string name="source_auto">Auto</string>
+    <string name="source_back">Back camera</string>
+    <string name="source_front">Front camera</string>
+    <string name="source_external">External camera</string>
 </resources>

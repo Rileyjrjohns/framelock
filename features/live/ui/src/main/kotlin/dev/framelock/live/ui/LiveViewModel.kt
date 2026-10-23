@@ -32,12 +32,25 @@ class LiveViewModel(
     val labelOf: (LabelId) -> String,
     /** Wired in `:app` to `TrackUiInteraction` (ADR-004). */
     val track: (ElementId) -> Unit,
+    /** Lists the sources available right now; devices come and go, so it is asked each time the picker opens. */
+    private val listSources: suspend () -> List<SourceOption>,
+    /** Chooses the source by [SourceOption.id]; `:app` applies it at the next start. */
+    private val chooseSource: (String) -> Unit,
+    /** The current choice, `Auto` by default. */
+    val selectedSource: StateFlow<SourceOption>,
+    /** The active source and, for a capture device, its negotiated mode; null when stopped. UI text only. */
+    val sourceDescription: StateFlow<String?>,
 ) : ViewModel() {
     val state: StateFlow<PipelineUiState> = observe.state
     val live: StateFlow<LiveMetrics> = observe.live
 
     private val hud = MutableStateFlow(false)
     val hudVisible: StateFlow<Boolean> = hud.asStateFlow()
+
+    private val sources = MutableStateFlow(listOf(selectedSource.value))
+
+    /** Options for the picker, as of the last [refreshSources]. */
+    val sourceOptions: StateFlow<List<SourceOption>> = sources.asStateFlow()
 
     private val lastStart = MutableStateFlow<StartResult?>(null)
     val startResult: StateFlow<StartResult?> = lastStart.asStateFlow()
@@ -56,6 +69,17 @@ class LiveViewModel(
     fun stop() {
         viewModelScope.launch { stop.invoke() }
     }
+
+    /** Lists the sources afresh; call when the picker opens. */
+    fun refreshSources() {
+        viewModelScope.launch { sources.value = listSources() }
+    }
+
+    /**
+     * Chooses the source. The screen only offers it while the pipeline is idle, because the pipeline picks its source
+     * when a session opens: a change applies at the next start.
+     */
+    fun selectSource(option: SourceOption) = chooseSource(option.id)
 
     fun toggleHud() {
         hud.value = !hud.value

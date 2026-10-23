@@ -12,11 +12,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -57,16 +62,23 @@ fun LiveScreen(
     val live by viewModel.live.collectAsStateWithLifecycle()
     val hudVisible by viewModel.hudVisible.collectAsStateWithLifecycle()
     val startResult by viewModel.startResult.collectAsStateWithLifecycle()
+    val selected by viewModel.selectedSource.collectAsStateWithLifecycle()
+    val options by viewModel.sourceOptions.collectAsStateWithLifecycle()
+    val description by viewModel.sourceDescription.collectAsStateWithLifecycle()
     Column(modifier.fillMaxSize().background(Color.Black)) {
         StatusBanner(ui, startResult)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             ui.annotated?.let { annotated ->
                 AnalysedFrame(annotated, viewModel.renderer::bitmapFor, viewModel.labelOf, viewModel::onDrawn)
             }
-            if (hudVisible) Hud(live, Modifier.align(Alignment.TopStart))
+            if (hudVisible) Hud(live, description, Modifier.align(Alignment.TopStart))
         }
         Controls(
             running = ui.state != PipelineState.Idle,
+            selected = selected,
+            options = options,
+            onOpenSources = viewModel::refreshSources,
+            onSelectSource = viewModel::selectSource,
             onStart = viewModel::start,
             onStop = viewModel::stop,
             onToggleHud = viewModel::toggleHud,
@@ -183,10 +195,11 @@ private fun DrawScope.fitInto(
 @Composable
 private fun Hud(
     live: LiveMetrics,
+    sourceDescription: String?,
     modifier: Modifier = Modifier,
 ) {
     val ms = { value: Double? -> value?.let { String.format(Locale.ROOT, "%.1f", it) } ?: "–" }
-    Text(
+    val metrics =
         stringResource(
             R.string.hud_line,
             live.inputFps,
@@ -194,16 +207,21 @@ private fun Hud(
             ms(live.inferenceMs),
             ms(live.e2eMs),
             live.droppedFrames,
-        ),
-        modifier = modifier.background(Color(0xCC000000)).padding(8.dp),
-        color = Color.White,
-        fontSize = 14.sp,
-    )
+        )
+    Column(modifier.background(Color(0xCC000000)).padding(8.dp)) {
+        // The source line changes only when a session starts.
+        sourceDescription?.let { Text(stringResource(R.string.hud_source, it), color = Color.White, fontSize = 14.sp) }
+        Text(metrics, color = Color.White, fontSize = 14.sp)
+    }
 }
 
 @Composable
 private fun Controls(
     running: Boolean,
+    selected: SourceOption,
+    options: List<SourceOption>,
+    onOpenSources: () -> Unit,
+    onSelectSource: (SourceOption) -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleHud: () -> Unit,
@@ -222,8 +240,50 @@ private fun Controls(
                 Text(stringResource(R.string.action_start), fontSize = 22.sp)
             }
         }
+        SourcePicker(!running, selected, options, onOpenSources, onSelectSource, onTrack)
         OutlinedButton(onToggleHud, Modifier.heightIn(min = TouchTarget).track(ElementId.TOGGLE_HUD, onTrack)) {
             Text(stringResource(R.string.action_hud), color = MaterialTheme.colorScheme.onPrimary)
+        }
+    }
+}
+
+/**
+ * The source button and its menu. Enabled only while the pipeline is stopped: the source is chosen when a session
+ * opens, so a change made while running would only apply at the next start. The options are listed afresh each time
+ * the menu opens.
+ */
+@Composable
+private fun SourcePicker(
+    enabled: Boolean,
+    selected: SourceOption,
+    options: List<SourceOption>,
+    onOpen: () -> Unit,
+    onSelect: (SourceOption) -> Unit,
+    onTrack: (ElementId) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(
+            onClick = {
+                onOpen()
+                expanded = true
+            },
+            modifier = Modifier.heightIn(min = TouchTarget).track(ElementId.SELECT_SOURCE, onTrack),
+            enabled = enabled,
+        ) {
+            Text(stringResource(R.string.action_source, selected.label), color = MaterialTheme.colorScheme.onPrimary)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label, fontSize = 18.sp) },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    },
+                    modifier = Modifier.heightIn(min = TouchTarget).track(ElementId.CHOOSE_SOURCE, onTrack),
+                )
+            }
         }
     }
 }

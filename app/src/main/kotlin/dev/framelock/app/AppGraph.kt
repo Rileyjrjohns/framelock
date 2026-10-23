@@ -57,20 +57,46 @@ class AppGraph(
 
     // One sequence for every source: the pipeline refuses a session id that does not increase (ADR-016).
     private val sessionIds = SessionIdSequence()
+    private val appContext = context.applicationContext
+    private val labels =
+        SourceLabels(
+            auto = context.getString(R.string.source_auto),
+            back = context.getString(R.string.source_back),
+            front = context.getString(R.string.source_front),
+            external = context.getString(R.string.source_external),
+        )
+
+    // Listed afresh each time the picker opens: devices come and go.
+    private val sourceSelection =
+        SourceSelection(labels) {
+            buildSourceOptions(
+                labels,
+                hasBack = CameraXCameras.has(appContext, CameraFacing.BACK),
+                hasFront = CameraXCameras.has(appContext, CameraFacing.FRONT),
+                hasExternal = CameraXCameras.has(appContext, CameraFacing.EXTERNAL),
+                uvcDevices = UvcDevices.list(appContext),
+            )
+        }
+    private val uvcSource =
+        UvcFrameSource(
+            appContext,
+            clock,
+            tracer,
+            sessionIds,
+            selectedDeviceId = { (sourceSelection.choice as? SourceChoice.Uvc)?.deviceId },
+        )
     private val source =
         SelectingFrameSource(
-            external =
-                CameraXFrameSource(
-                    context.applicationContext,
-                    clock,
-                    tracer,
-                    sessionIds,
-                    facing = CameraFacing.EXTERNAL,
-                ),
-            uvc = UvcFrameSource(context.applicationContext, clock, tracer, sessionIds),
-            back = CameraXFrameSource(context.applicationContext, clock, tracer, sessionIds),
-            hasExternalCamera = { CameraXCameras.hasExternal(context.applicationContext) },
-            hasUvcDevice = { UvcDevices.isAttached(context.applicationContext) },
+            external = CameraXFrameSource(appContext, clock, tracer, sessionIds, facing = CameraFacing.EXTERNAL),
+            uvc = uvcSource,
+            back = CameraXFrameSource(appContext, clock, tracer, sessionIds),
+            front = CameraXFrameSource(appContext, clock, tracer, sessionIds, facing = CameraFacing.FRONT),
+            choice = { sourceSelection.choice },
+            hasExternalCamera = { CameraXCameras.has(appContext, CameraFacing.EXTERNAL) },
+            hasUvcDevice = { UvcDevices.isAttached(appContext) },
+            labels = labels,
+            uvcDescription = uvcSource.description,
+            scope = scope,
         )
     private val pipeline =
         InferencePipeline(
@@ -109,6 +135,10 @@ class AppGraph(
             clock = clock,
             labelOf = developmentModel::labelOf,
             track = { trackUi(it) },
+            listSources = sourceSelection::options,
+            chooseSource = sourceSelection::select,
+            selectedSource = sourceSelection.current,
+            sourceDescription = source.activeDescription,
         )
 
     private companion object {

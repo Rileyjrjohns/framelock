@@ -41,7 +41,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /** Which camera a [CameraXFrameSource] binds to. */
-enum class CameraFacing { BACK, EXTERNAL }
+enum class CameraFacing { BACK, FRONT, EXTERNAL }
 
 /**
  * [FrameSource] over CameraX `ImageAnalysis` (the fallback source, works without a capture card).
@@ -55,9 +55,9 @@ enum class CameraFacing { BACK, EXTERNAL }
  * - A camera error ends the session with `Disconnected(STREAM_ERROR)`.
  * - Events that are never collected are released: the channel closes their buffers.
  *
- * [facing] is the back camera by default; [CameraFacing.EXTERNAL] selects a camera that Camera2 exposes as external
- * (see [CameraXCameras.hasExternal]). Session ids come from a [SessionIdSequence] shared with the
- * other sources, so they keep increasing when the app switches source.
+ * [facing] is the back camera by default; [CameraFacing.FRONT] selects the front one and [CameraFacing.EXTERNAL] a
+ * camera that Camera2 exposes as external (see [CameraXCameras.has]). Session ids come from a [SessionIdSequence]
+ * shared with the other sources, so they keep increasing when the app switches source.
  *
  * The camera binds to a lifecycle this source owns, so the pipeline, not a screen, decides when it runs.
  */
@@ -95,6 +95,10 @@ class CameraXFrameSource(
         when (facing) {
             CameraFacing.BACK -> {
                 CameraSelector.DEFAULT_BACK_CAMERA
+            }
+
+            CameraFacing.FRONT -> {
+                CameraSelector.DEFAULT_FRONT_CAMERA
             }
 
             CameraFacing.EXTERNAL -> {

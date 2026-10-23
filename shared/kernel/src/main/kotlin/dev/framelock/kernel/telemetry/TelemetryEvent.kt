@@ -10,7 +10,16 @@ interface TelemetryEvent
 enum class ScreenId { LIVE, MODELS }
 
 /** UI elements that can be tracked. */
-enum class ElementId { START, STOP, TOGGLE_HUD, IMPORT_MODEL, ACTIVATE_MODEL, ROLLBACK_MODEL }
+enum class ElementId {
+    START,
+    STOP,
+    TOGGLE_HUD,
+    SELECT_SOURCE,
+    CHOOSE_SOURCE,
+    IMPORT_MODEL,
+    ACTIVATE_MODEL,
+    ROLLBACK_MODEL,
+}
 
 /** App usage, emitted by the app and the UI modules. */
 sealed interface UsageTelemetry : TelemetryEvent {
