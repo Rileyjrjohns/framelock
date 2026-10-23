@@ -77,6 +77,19 @@ that matter here are listed in ADR-016.
 |---|---|---|---|
 | EfficientDet-Lite0 with the TFLite detection post-processing op and embedded COCO labels | Kaggle Models `tensorflow/efficientdet/tfLite/lite0-detection-metadata` v1, SHA-256 `2e04c53b…4e0b` | `scripts/fetch-model.sh` (Kaggle API download) | Apache-2.0 (Kaggle model page); trained on COCO 2017 (annotations CC BY 4.0, images under Flickr terms) |
 
+### Added in M6 (shipped)
+
+Versions checked on 2026-10-23: Room 2.8.5 and WorkManager 2.12.0 are the latest stable in Google Maven
+(`dl.google.com/dl/android/maven2/androidx/{room/room-runtime,work/work-runtime}/maven-metadata.xml`), KSP 2.3.12 and
+kotlinx-serialization-json 1.12.0 the latest on Maven Central; licences read from each POM.
+
+| Component | Version | Purpose | Licence |
+|---|---|---|---|
+| AndroidX Room (`room-runtime`, with `room-common`) | 2.8.5 | Capped telemetry buffer (ADR-004, M6) | Apache-2.0 |
+| AndroidX SQLite (`sqlite`, `sqlite-framework`) | 2.6.2 (transitive of Room) | Database access | Apache-2.0 |
+| AndroidX WorkManager (`work-runtime`) | 2.12.0 | Periodic telemetry upload | Apache-2.0 |
+| kotlinx-serialization-json (with `kotlinx-serialization-core`) | 1.12.0 (core raised from 1.7.3 by this dependency) | JSON encoding of telemetry events, written by hand, in the adapter only | Apache-2.0 |
+
 ## Tests only
 
 | Component | Version | Purpose | Licence |
@@ -86,6 +99,7 @@ that matter here are listed in ADR-016.
 | Konsist | 0.18.1 | Architecture rules | Apache-2.0 |
 | JUnit 4 | 4.13.2 | Instrumented tests | EPL-1.0 |
 | AndroidX Test (core, runner, rules, ext-junit) | 1.7.0 / ext 1.3.0 | Instrumented tests | Apache-2.0 |
+| AndroidX WorkManager testing (`work-testing`) | 2.12.0 | `TestListenableWorkerBuilder` for the upload worker (instrumented) | Apache-2.0 |
 | Compose UI test (junit4, manifest), UI tooling | BOM 2026.09.00 | UI tests, debug tooling | Apache-2.0 |
 
 ## Build tools
@@ -95,7 +109,8 @@ that matter here are listed in ADR-016.
 | Gradle | 9.8.2 | Build | Apache-2.0 |
 | Android Gradle Plugin | 9.4.1 | Android build, built-in Kotlin, Lint | Apache-2.0 |
 | Kotlin Gradle Plugin, Compose compiler plugin | 2.4.21 | Kotlin compilation | Apache-2.0 |
-| KSP | 2.3.12 | Annotation processing (Room, from M6) | Apache-2.0 |
+| KSP | 2.3.12 | Annotation processing (Room compiler, M6; works with AGP 9.4.1 built-in Kotlin, see the build) | Apache-2.0 |
+| Room Gradle plugin (`androidx.room`) | 2.8.5 | Exports the database schema (`features/telemetry/room/schemas/`) | Apache-2.0 |
 | Foojay toolchain resolver | 1.0.0 | JDK provisioning | Apache-2.0 |
 | Spotless | 8.10.4 | Formatting check | Apache-2.0 |
 | ktlint | 1.8.0 | Kotlin style | MIT |
@@ -110,7 +125,4 @@ Recorded with their milestone so licences are reviewed before code depends on th
 
 | Component | Version | Milestone | Licence |
 |---|---|---|---|
-| kotlinx-serialization-json | 1.12.0 | M5/M6 | Apache-2.0 |
-| Room | 2.8.5 | M6 | Apache-2.0 |
-| WorkManager | 2.12.0 | M6 | Apache-2.0 |
 | Benchmark, Baseline Profile plugin, ProfileInstaller (direct; 1.4.0 already ships transitively), UI Automator | 1.5.0 / 1.4.1 / 2.4.0 | M7 | Apache-2.0 |

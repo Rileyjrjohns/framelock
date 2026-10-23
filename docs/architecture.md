@@ -66,9 +66,9 @@ flowchart LR
 :features:models:application    pure Kotlin — ImportModel, ActivateModel, RollbackModel
 :features:models:store          ModelRepository and AuditLog: versioned models on disk, signature check, atomic activate/rollback, labels
 :features:models:ui             models screen
-:features:telemetry:domain      pure Kotlin — TelemetryAllowlist, port TelemetrySink
+:features:telemetry:domain      pure Kotlin — TelemetryAllowlist, TelemetryBatch, ports TelemetrySink and TelemetryUploader
 :features:telemetry:application pure Kotlin — TelemetryRecorder, TrackScreen, TrackUiInteraction
-:features:telemetry:room        TelemetrySink: Room buffer + WorkManager batch upload
+:features:telemetry:room        TelemetrySink: Room buffer + WorkManager batch upload, LoggingUploader
 :app                            composition root (manual DI, `AppGraph`)
 ```
 
@@ -139,6 +139,7 @@ interface ThermalMonitor { val level: Flow<ThermalLevel> }
 interface MemoryPressureMonitor { val pressure: Flow<MemoryPressure> }
 interface DeviceInfoProvider { fun snapshot(): DeviceSnapshot }
 interface TelemetrySink { fun record(event: TelemetryEvent) }
+interface TelemetryUploader { suspend fun upload(batch: TelemetryBatch): Boolean }  // ADR-004 (M6)
 interface Clock { fun nowNanos(): Long }
 interface Tracer { fun begin(section: TraceSection); fun end() }  // + inline Tracer.trace(section) { } (ADR-009)
 interface AuditLog { fun record(entry: AuditEntry) }                // ADR-003
@@ -198,7 +199,8 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
 - `MetricsAggregator` aggregates over 10 s windows. No per-frame events.
 - End-to-end latency = render time − capture timestamp, on the same clock (`elapsedRealtimeNanos`).
 - Battery temperature comes from the sticky `ACTION_BATTERY_CHANGED` intent (`EXTRA_TEMPERATURE`, tenths of °C).
-- Adapter: capped Room table (oldest events dropped first), periodic WorkManager batch upload with a network constraint, gzipped JSON. `LoggingUploader` by default, `HttpUploader` behind a config flag.
+- Adapter: capped Room table (10 000 rows, oldest events dropped first), periodic WorkManager batch upload (every 15 min, network constraint, 500 events per gzipped JSON array), `LoggingUploader` by default. `HttpUploader` behind a config flag is future work (ADR-004, M6).
+- A stored event is one JSON object, `{"type":"<EventName>","atMillis":<wall clock>, ...fields}`. `TelemetrySink.record` never blocks its caller: events go through a bounded queue to one writer coroutine.
 
 ## UI (Compose)
 

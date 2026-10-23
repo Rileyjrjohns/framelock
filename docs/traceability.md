@@ -108,6 +108,19 @@ amendment M5.
 | MS-11 | Models screen: import from a file, activate, rollback, disabled while `ModelSwapPolicy` refuses; Live ↔ Models navigation with system back | `AppGraph.modelsViewModel`, `MainActivity`; screen logic: models:ui tests; on device (2026-10-23) through the system file picker: a tampered package refused (bad signature, audited), a second signed version imported, activated and rolled back, the three actions disabled with an explanation while running | covered |
 | MS-12 | Trusted keys loaded from `assets/keys`; a release build with no key refuses every import | `TrustedKeyAssets`; signature rule: `FileModelRepositoryTest`; debug key checked on device (2026-10-23); release build without a key not yet run | covered (release case not yet run) |
 
+## Telemetry transport (M6)
+
+The JVM tests are in `features/telemetry/room/src/test`; the instrumented ones (JUnit 4, `androidTest`) need a device.
+
+| ID | Requirement | Tests | Status |
+|---|---|---|---|
+| TELA-1 | Capped buffer: oldest events dropped first, in the insert's transaction, dropped events counted | room (instrumented) → `TelemetryDaoTest` (cap, batch larger than the cap, oldest-first paging, delete by ids, ids never reused), `RoomTelemetryBufferTest` (drop count and callback) | written, not yet run |
+| TELA-2 | Batching: 500 events per page, gzipped JSON array, rows deleted only after an accepted upload, failure keeps them and retries, page limit per run | telemetry:domain → `TelemetryBatchTest`; room → `TelemetryBatchBuilderTest` (valid array, order, gzip round trip), `TelemetryUploadRunTest` (pages, failure, throwing uploader, limit); room (instrumented) → `TelemetryUploadWorkerTest` (success deletes, failure keeps and returns retry, empty buffer) | JVM covered; worker written, not yet run |
+| TELA-3 | Every event type has a JSON encoding `{"type","atMillis",...}`; an unknown family is not encoded | room → `TelemetryEventEncoderTest` (one test per event type, null fields, unknown event) | covered |
+| TELA-4 | `record` never blocks or throws: bounded queue dropping its oldest event, counted; a failing buffer loses one batch only; debug tee keeps the Logcat line | room → `RoomTelemetrySinkTest`, `TeeTelemetrySinkTest` | covered |
+| TELA-5 | `LoggingUploader` logs count and sizes, the first events in debug, and accepts the batch | room → `LoggingUploaderTest` | covered |
+| TELA-6 | Periodic unique work (15 min, network, exponential backoff, KEEP); debug one-time upload; WorkManager configured by the application (default initializer removed) | `TelemetryUploadScheduler`, `FramelockApplication`, merged manifest checked (`WorkManagerInitializer` absent); no automated test; on device: not yet run | implemented, untested |
+
 ## Later milestones
 
 | ID | Requirement | Status |
@@ -119,5 +132,4 @@ amendment M5.
 | CAP-1 | Camera frames delivered upright and following display rotation, without a new session | capture-camerax → `YuvFramePoolTest` (pool swapped only on a size change, buffers of a replaced pool released to it); rotation checked on device (2026-10-23) | covered (rotation manual) |
 | UI-1 | "No signal" banner shown and overlay hidden on disconnect | live:ui → `LiveScreen` shows the `NoSignal` banner (`state_no_signal`) and the overlay comes from `PipelineUiState.annotated`, which `NoSignal` clears (live:application → `InferencePipelineConnectionTest`); no UI test yet | implemented, untested |
 | UI-2 | The video source can be chosen (Auto, back, front, external, each UVC device) while stopped; an explicit choice overrides Auto and applies at the next start; the HUD shows the active source and UVC mode | app → `SelectingFrameSourceTest` (explicit choice, Auto order unchanged, applies after close, description), `SourceSelectionTest` (option listing, id mapping, selection); capture-uvc → `UvcDeviceNamingTest` (labels, ids, HUD text); picker menu seen on device listing Auto, back and front cameras (2026-10-23); a UVC entry not yet seen | covered (UVC entry not yet seen) |
-| TELA-1, TELA-2 | Telemetry buffer cap; batching | planned M6 |
 | PIPE-6b, PERF-1 | No per-frame allocation (measured); performance results | planned M7 |

@@ -4,7 +4,9 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 (HDMI → USB) or from the device camera; a detection model runs on each analysed frame, and the result is
 drawn on the exact frame it was computed from.
 
-> Status: **M5, model store.** Models are imported from signed `.flmodel` packages (ECDSA P-256 over a manifest that covers the model and its labels), activated and rolled back from a Models screen, with an audit trail ([ADR-003](docs/adr/ADR-003-signed-models-outside-apk.md), amendment M5).
+> Status: **M6, telemetry.** Accepted events are stored in a capped Room table and uploaded in gzipped JSON batches by WorkManager; the default uploader only logs ([ADR-004](docs/adr/ADR-004-typed-telemetry.md), amendment M6).
+>
+> Before that, **M5, model store.** Models are imported from signed `.flmodel` packages (ECDSA P-256 over a manifest that covers the model and its labels), activated and rolled back from a Models screen, with an audit trail ([ADR-003](docs/adr/ADR-003-signed-models-outside-apk.md), amendment M5).
 >
 > Before that, **M4, system adapters.** Thermal (status listener plus forecast headroom on Android 11+) and memory pressure (trim callbacks plus `ActivityManager.MemoryInfo` polling) now drive the degradation of ADR-013 ([ADR-017](docs/adr/ADR-017-system-adapters.md)); the HUD shows both.
 >
@@ -95,6 +97,37 @@ one (so the second call may be refused until the process is restarted) and a bac
 foreground process. On Android 14+ the shell still hands the level to the app (checked on Android 16), although the
 system no longer sends the `RUNNING_*` levels itself.
 
+### Telemetry (debug)
+
+Telemetry is metrics only (typed events, no images, no free text). Events are queued, written to a Room table
+(`databases/telemetry.db`, at most 10 000 rows, oldest dropped first) and uploaded every 15 minutes while a network is
+available. The only uploader is `LoggingUploader`: it sends nothing and logs. A debug build also logs each event and
+runs one upload 20 s after start, so a check does not wait 15 minutes:
+
+```bash
+adb logcat -c
+adb logcat -s Telemetry TelemetryBuffer TelemetryUpload WM-WorkerWrapper
+# Telemetry        every recorded event (debug only), as a Kotlin object, not as stored JSON
+# TelemetryUpload  "Upload of N events: X B gzipped, Y B raw" then the first five events as stored JSON
+# TelemetryBuffer  "Buffer full: ..." when the cap dropped events, "Telemetry queue full" / "write failed" on overload
+```
+
+Start the app, use it for a while, then wait 20 s: the upload line appears (the work needs a network; wireless
+debugging implies one). The rows are deleted after the upload, so the table is usually empty right after. To see the
+work itself: `adb shell dumpsys jobscheduler | grep -B2 -A12 dev.framelock` lists the scheduled jobs, and on a debug build
+`adb shell am broadcast -a androidx.work.diagnostics.REQUEST_DIAGNOSTICS -p dev.framelock` prints the recent, running
+and scheduled work to Logcat (`WM-DiagnosticsWrkr`). To read the buffer, copy the database (with its `-wal` file) out
+of the debug app:
+
+```bash
+adb exec-out run-as dev.framelock cat databases/telemetry.db > telemetry.db
+adb exec-out run-as dev.framelock cat databases/telemetry.db-wal > telemetry.db-wal
+sqlite3 telemetry.db 'select id, payload from telemetry_events order by id limit 10'
+```
+
+Both the periodic work and the debug one-time work are unique (`telemetry-upload`, `telemetry-upload-once`). An
+`HttpUploader` is not implemented yet.
+
 ## Build and test
 
 ```bash
@@ -113,7 +146,7 @@ End-to-end latency is render time minus capture time; it does not include compos
 | `shared/testing` | A fake for every port, shared by all tests. |
 | `features/live` | Capture, inference and display: `domain`, `application` (pipeline, metrics), adapters (UVC, CameraX, LiteRT, system), `ui`. |
 | `features/models` | Model import, signature check, activation and rollback: `domain`, `application`, `store`, `ui`. |
-| `features/telemetry` | Metrics-only telemetry: `domain` (allowlist), `application` (recorder), `room`. |
+| `features/telemetry` | Metrics-only telemetry: `domain` (allowlist), `application` (recorder), `room` (capped buffer, batch upload). |
 | `app` | Composition root (manual DI). |
 | `architecture-tests` | Konsist rules. |
 | `build-logic` | Gradle convention plugins and the module boundary check. |
