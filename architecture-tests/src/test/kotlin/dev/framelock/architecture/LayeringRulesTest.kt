@@ -36,6 +36,11 @@ class LayeringRulesTest {
     }
 
     @Test
+    fun `telemetry events carry only primitives, enums, value classes and bounded strings`() {
+        assertNoViolation(Rules.telemetryFieldViolations(files))
+    }
+
+    @Test
     fun `pure modules do not use limitedParallelism`() {
         assertNoViolation(Rules.pureCallsToLimitedParallelism(files))
     }

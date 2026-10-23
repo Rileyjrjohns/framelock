@@ -65,4 +65,24 @@ class RuleFixturesTest {
             violations.joinToString("\n"),
         )
     }
+
+    @Test
+    fun `telemetry fields that could carry an image or free text are caught`() {
+        val violations = Rules.telemetryFieldViolations(Scopes.fixture("telemetry-fields"))
+
+        assertEquals(
+            setOf(
+                "dev.framelock.live.domain.telemetry.LeakyEvent.note",
+                "dev.framelock.live.domain.telemetry.LeakyEvent.frame",
+            ),
+            violations.map { it.substringBefore(" has type") }.toSet(),
+            violations.joinToString("\n"),
+        )
+    }
+
+    @Test
+    fun `hidden directories are skipped only at the repository root`() {
+        assertEquals(false, Scopes.isProjectSource("/.worktrees/x/features/live/domain/src/main/kotlin/A.kt"))
+        assertEquals(true, Scopes.isProjectSource("/features/live/domain/src/main/kotlin/dev/.hidden/A.kt"))
+    }
 }

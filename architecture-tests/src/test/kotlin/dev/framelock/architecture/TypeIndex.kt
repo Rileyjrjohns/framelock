@@ -14,6 +14,10 @@ internal class TypeIndex(
         val isInterface: Boolean,
         val isSealed: Boolean,
         val isFunInterface: Boolean,
+        /** `enum class` or `value class`: a closed or wrapped value, never free text by itself. */
+        val isEnumOrValue: Boolean,
+        /** Primary constructor properties as (name, type as written). */
+        val properties: List<Pair<String, String>>,
         val parentNames: List<String>,
     )
 
@@ -29,6 +33,8 @@ internal class TypeIndex(
                     isInterface = SourceFile.isInterface(type),
                     isSealed = Regex("""\bsealed\s+interface\b""").containsMatchIn(header),
                     isFunInterface = Regex("""\bfun\s+interface\b""").containsMatchIn(header),
+                    isEnumOrValue = Regex("""\b(enum|value)\s+class\b""").containsMatchIn(header),
+                    properties = PROPERTY.findAll(header).map { it.groupValues[1] to it.groupValues[2] }.toList(),
                     parentNames =
                         type.parents(indirectParents = false).mapNotNull { parent ->
                             TYPE_NAME.find(SourceFile.stripCommentsAndStrings(parent.text))?.value?.trim()
@@ -82,5 +88,6 @@ internal class TypeIndex(
 
     private companion object {
         val TYPE_NAME = Regex("""^\s*[\w.]+""")
+        val PROPERTY = Regex("""\bval\s+(\w+)\s*:\s*([\w.]+\??)""")
     }
 }

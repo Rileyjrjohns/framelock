@@ -139,6 +139,37 @@ internal object Rules {
         return violations
     }
 
+    private const val TELEMETRY_EVENT = "$ROOT_PACKAGE.kernel.telemetry.TelemetryEvent"
+    private val PRIMITIVES = setOf("Int", "Long", "Float", "Double", "Boolean")
+
+    /** The only free-form strings telemetry may carry, each bounded by the allowlist (ADR-004 amendment). */
+    val BOUNDED_STRING_FIELDS = setOf("DeviceSnapshotRecorded.model", "DeviceSnapshotRecorded.osVersion")
+
+    /**
+     * ADR-004: every telemetry event carries only primitives, enums and value classes of the project, plus the few
+     * bounded strings of [BOUNDED_STRING_FIELDS]. Never an image, a byte array, a collection or free text.
+     */
+    fun telemetryFieldViolations(files: List<SourceFile>): List<String> {
+        val index = TypeIndex(files)
+        val enumsAndValues =
+            index.types
+                .filter { it.isEnumOrValue }
+                .map { it.fqn }
+                .toSet()
+        return index.types
+            .filter { !it.isInterface && it.file.isProduction && TELEMETRY_EVENT in index.supertypesOf(it) }
+            .flatMap { event ->
+                event.properties.mapNotNull { (name, written) ->
+                    val type = written.removeSuffix("?")
+                    val allowed =
+                        type in PRIMITIVES ||
+                            index.resolve(type, event.file) in enumsAndValues ||
+                            (type == "String" && "${event.simpleName}.$name" in BOUNDED_STRING_FIELDS)
+                    if (allowed) null else "${event.fqn}.$name has type $written, not allowed (${event.file})"
+                }
+            }
+    }
+
     private fun forbiddenReferences(
         files: List<SourceFile>,
         prefixes: List<String>,

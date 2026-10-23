@@ -96,10 +96,11 @@ internal class SourceFile(
     companion object {
         /** The last `/src/<set>/kotlin/` (or `java`) segment: the repository may itself sit under a `src` directory. */
         private val SOURCE_SET = Regex("""/src/([^/]+)/(kotlin|java)/""")
-        private val MODULE = Regex("""/(shared/[a-z-]+|features/[a-z-]+/[a-z-]+|app)/src/[^/]+/(?:kotlin|java)/""")
-        private val PURE_FEATURE_LAYER = Regex("features/[a-z-]+/(domain|application)")
+        private val MODULE =
+            Regex("""/(shared/[a-z0-9-]+|features/[a-z0-9-]+/[a-z0-9-]+|app)/src/[^/]+/(?:kotlin|java)/""")
+        private val PURE_FEATURE_LAYER = Regex("features/[a-z0-9-]+/(domain|application)")
         private val PACKAGE = Regex("""(?m)^\s*package\s+([\w.]+)""")
-        private val IMPORT = Regex("""(?m)^\s*import\s+([\w.]+?)(\.\*)?(\s+as\s+(\w+))?\s*$""")
+        private val IMPORT = Regex("""(?m)^\s*import\s+([\w.]+?)(\.\*)?(\s+as\s+(\w+))?\s*;?\s*$""")
         private val QUALIFIED_NAME = Regex("""(?<![\w.])[a-z]\w*(\.\w+)+""")
 
         fun isInterface(type: KoClassAndInterfaceAndObjectDeclaration): Boolean = type is KoInterfaceDeclaration
