@@ -28,7 +28,9 @@ internal class YuvFramePool(
     private val free = ArrayBlockingQueue<PooledYuvBuffer>(capacity)
 
     init {
-        require(width > 0 && height > 0 && width % 2 == 0 && height % 2 == 0) { "Even, positive size: ${width}x$height" }
+        require(
+            width > 0 && height > 0 && width % 2 == 0 && height % 2 == 0,
+        ) { "Even, positive size: ${width}x$height" }
         repeat(capacity) { free.add(PooledYuvBuffer(width, height, this)) }
     }
 

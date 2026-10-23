@@ -19,7 +19,12 @@ class YuvFramePoolTest {
         val u = plane(byteArrayOf(10, 99, 11, 99))
         val v = plane(byteArrayOf(20, 99, 21, 99))
 
-        val buffer = pool.copy(SourcePlane(y, rowStride = 6, pixelStride = 1), SourcePlane(u, 4, 2), SourcePlane(v, 4, 2))
+        val buffer =
+            pool.copy(
+                SourcePlane(y, rowStride = 6, pixelStride = 1),
+                SourcePlane(u, 4, 2),
+                SourcePlane(v, 4, 2),
+            )
 
         assertEquals(ImageFormat.YUV_420_888, buffer?.format)
         assertArrayEquals(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8), bytes(buffer!!.planes[0].buffer))

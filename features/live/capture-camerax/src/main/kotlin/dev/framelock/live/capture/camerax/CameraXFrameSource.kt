@@ -87,7 +87,10 @@ class CameraXFrameSource(
                         ResolutionSelector
                             .Builder()
                             .setResolutionStrategy(
-                                ResolutionStrategy(requestedSize, ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
+                                ResolutionStrategy(
+                                    requestedSize,
+                                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
+                                ),
                             ).build(),
                     ).build()
             session = SessionId(lastSession.incrementAndGet())
@@ -147,7 +150,10 @@ class CameraXFrameSource(
         frameIds.restart()
         connected = true
         channel.trySend(
-            SourceEvent.Connected(StreamSpec(proxy.width, proxy.height, ImageFormat.YUV_420_888, timestampSource), current),
+            SourceEvent.Connected(
+                StreamSpec(proxy.width, proxy.height, ImageFormat.YUV_420_888, timestampSource),
+                current,
+            ),
         )
     }
 
