@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     api(projects.features.live.domain)
+    implementation(libs.bundles.litert)
 }
