@@ -18,4 +18,12 @@ Telemetry must never carry images or free text. Per-frame events would also cost
 
 ## Consequences
 
-The few bounded string fields (device model, OS version) are specified in M1 (amendment to this ADR).
+### Amendment (2026-10-23, M1)
+
+- The telemetry event for device information is `DeviceSnapshotRecorded`, distinct from the domain type
+  `DeviceSnapshot`. Its `model` and `osVersion` are the only free-form strings allowed, bounded to
+  `[A-Za-z0-9._ -]{1,64}`. `ModelVersion` uses `[A-Za-z0-9._-]{1,64}`. Causes and reasons are enums.
+- `StartPipeline` records `DeviceSnapshotRecorded` once per start; the app records `AppSession` at launch (M2).
+- `PipelineWindow`: a window with no frame is not emitted; percentiles use the nearest-rank method; latency fields are
+  null when the window has no sample.
+- The debug HUD reads a separate `LiveMetrics` state updated once per second; it is never sent as telemetry.

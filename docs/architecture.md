@@ -63,7 +63,7 @@ Dependency rules:
 - `InferenceResult(frameId, sessionId, modelVersion, detections, inferenceNanos)`
 - `Detection(box: NormalizedRect, label: LabelId, score: Float)`
 - `ModelVersion`, `ModelManifest(version, sha256, signature, inputSpec, outputSpec)`, `ModelArtifact(manifest, location)`
-- `PipelineState`: `Idle`, `Connecting`, `NoSignal(reason)`, `Running(rate)`, `Degraded(cause)`, `Paused(cause)`
+- `PipelineState`: `Idle`, `Connecting`, `NoSignal(reason)`, `Running(rate)`, `Degraded(cause, rate)`, `Paused(cause)` (ADR-013)
 - `ThermalLevel` (NONE … SHUTDOWN), `MemoryPressure` (NORMAL, MODERATE, CRITICAL)
 - `TelemetryEvent`: sealed, metrics only (see Telemetry)
 
@@ -87,7 +87,7 @@ interface FrameSource {
 }
 
 sealed interface SourceEvent {
-    data class Connected(val spec: StreamSpec) : SourceEvent
+    data class Connected(val spec: StreamSpec, val sessionId: SessionId) : SourceEvent  // adapter allocates the session
     data class FrameAvailable(val frame: Frame) : SourceEvent
     data class Disconnected(val reason: DisconnectReason) : SourceEvent
 }
@@ -100,6 +100,8 @@ interface InferenceEngine : AutoCloseable {
 
 interface ModelRepository {
     fun active(): ModelArtifact?
+    fun previous(): ModelArtifact?
+    fun artifact(version: ModelVersion): ModelArtifact?
     fun list(): List<ModelManifest>
     suspend fun import(source: ModelSource): Result<ModelManifest>
     suspend fun activate(version: ModelVersion): Result<Unit>
@@ -111,10 +113,11 @@ interface MemoryPressureMonitor { val pressure: Flow<MemoryPressure> }
 interface DeviceInfoProvider { fun snapshot(): DeviceSnapshot }
 interface TelemetrySink { fun record(event: TelemetryEvent) }
 interface Clock { fun nowNanos(): Long }
-interface Tracer { fun <T> section(name: String, block: () -> T): T }
+interface Tracer { fun begin(section: TraceSection); fun end() }  // + inline Tracer.trace(section) { } (ADR-009)
+interface AuditLog { fun record(entry: AuditEntry) }                // ADR-003
 ```
 
-Driving (inbound): the use cases in `:core:application`: `StartPipeline`, `StopPipeline`, `ObservePipeline`, `ImportModel`, `ActivateModel`, `RollbackModel`, `TrackScreen`, `TrackUiInteraction`.
+Driving (inbound): the use cases in `:core:application`: `StartPipeline`, `StopPipeline`, `ObservePipeline`, `ReportFrameRendered` (ADR-011), `ImportModel`, `ActivateModel`, `RollbackModel`, `TrackScreen`, `TrackUiInteraction`.
 
 ## Pipeline (`:core:application`)
 
@@ -219,6 +222,11 @@ Each requirement links to its tests in `docs/traceability.md`.
 - ADR-006: module boundaries enforced by a Gradle plugin and by Konsist
 - ADR-007: test frameworks: JUnit Jupiter on the JVM, JUnit 4 instrumented, no Robolectric
 - ADR-008: static analysis: Android Lint, ktlint (Spotless), detekt on pure-Kotlin modules only
+- ADR-009: Tracer port without per-frame allocation
+- ADR-010: frame buffer ownership (source → pipeline → display slot)
+- ADR-011: clock base and end-to-end latency
+- ADR-012: scope of "no per-frame allocation"
+- ADR-013: inference rate and degradation table
 
 ## Out of scope
 

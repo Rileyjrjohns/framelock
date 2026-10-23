@@ -21,4 +21,16 @@ capture session would change results mid-session.
 
 ## Consequences
 
-Port additions needed for "load before switching" and for the audit trail are decided in M1 (amendment to this ADR).
+### Amendment (2026-10-23, M1)
+
+- `ModelRepository` gains `artifact(version)` and `previous()`, so the engine can load the new (or previous) model
+  before the pointer switches.
+- New port `AuditLog.record(AuditEntry)`; an entry has an action, a version, an outcome and a timestamp. Implemented by
+  the model store in M5.
+- `ModelSource` is a domain interface (`displayName`, `open(): InputStream`), so the domain never sees an Android `Uri`.
+- `ActivateModel` and `RollbackModel` run only when `ModelSwapPolicy` allows it, load on the engine's thread, and hold a
+  swap lock that `StartPipeline` also takes, so a session cannot start in the middle of a swap. If the repository
+  fails after a successful load, the previous model is loaded back.
+- Starting without an active model fails with a typed error. Importing is allowed only when idle or without signal
+  (it costs CPU and I/O).
+- Refusals and failures emit `ModelRejected(reason)` with `SWAP_REFUSED` or `LOAD_FAILED`, plus an audit entry.

@@ -12,10 +12,14 @@ One file per decision: context, decision, consequences. A decision changes only 
 | [006](ADR-006-module-boundaries.md) | Module boundaries enforced by Gradle and Konsist | Accepted |
 | [007](ADR-007-test-frameworks.md) | Test frameworks | Accepted |
 | [008](ADR-008-static-analysis.md) | Static analysis | Accepted |
+| [009](ADR-009-tracer-port.md) | Tracer port without per-frame allocation | Accepted |
+| [010](ADR-010-frame-buffer-ownership.md) | Frame buffer ownership | Accepted |
+| [011](ADR-011-clock-and-latency.md) | Clock base and end-to-end latency | Accepted |
+| [012](ADR-012-per-frame-allocation.md) | Scope of "no per-frame allocation" | Accepted |
+| [013](ADR-013-inference-rate-and-degradation.md) | Inference rate and degradation | Accepted |
 
-Planned (M1): Tracer port without per-frame allocation, frame buffer ownership for display, clock base and
-end-to-end latency, scope of "no per-frame allocation", inference rate and degradation table, model and audit
-ports, telemetry string fields. Planned (M3): UVC library and its USB permission handling.
+Amended in M1: ADR-003 (model and audit ports, swap lock), ADR-004 (telemetry string fields, events, windows).
+Planned (M3): UVC library and its USB permission handling.
 
 ## Template
 
