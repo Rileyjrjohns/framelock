@@ -101,6 +101,24 @@ library. Several choices depend on what that library does, which was read in its
   extra surface copy, whether the card keeps sending frames without an HDMI input, and the behaviour of the exported
   receiver on Android 16.
 
+## Measured on a device (2026-10-23)
+
+USB webcam (a UVC device, same code path as a capture card) on a Galaxy A33, Android 16, with the debug build:
+
+| | USB webcam (UVC) | Back camera (CameraX) |
+|---|---|---|
+| Mode negotiated | MJPEG 1280x720 (YUYV offered at 10 fps only at that size) | YUV 640x480, rotated by CameraX |
+| Input fps | ~29 | ~15 |
+| Inference p50 / p95 | 40–50 ms / 45–58 ms (rising over 90 s) | 63–71 ms / 67–76 ms |
+| End-to-end p50 | ~160 ms | ~330 ms |
+| Frames analysed per second | ~14 | ~10–11 |
+
+The webcam was first negotiated at 60 fps, which only added JPEG decoding; the rule now takes the lowest rate
+reaching 30 fps. Permission, open, streaming and teardown worked; no USB error was logged. Still unverified with a
+real device: unplug and replug during a session (issue #134), an HDMI capture card (issue #135, placeholder frames
+without input), the cost of the extra surface copy. The back camera's lower numbers are an M7 lead (CPU rotation by
+CameraX, indoor auto-exposure).
+
 ## Consequences
 
 - The app ships the library's native libraries (libusb under LGPL-2.1 as a shared object, see `docs/soup.md`) and its
