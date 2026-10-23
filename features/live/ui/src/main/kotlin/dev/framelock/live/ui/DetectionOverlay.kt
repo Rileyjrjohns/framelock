@@ -33,20 +33,23 @@ private const val PERCENT = 100
 /** Past this many distinct (class, percent) labels the text cache starts over: it only guards against growth. */
 private const val MAX_CACHED_LABELS = 512
 
-private val BoxStroke = 3.dp
-private val OutlineStroke = 6.dp
-private val BoxRadius = 6.dp
-private val ChipRadius = 6.dp
-private val ChipPaddingX = 6.dp
-private val ChipPaddingY = 3.dp
-private val OutlineColor = Color(0x99000000)
+private val BoxStroke = 2.5.dp
+private val GlowStroke = 6.dp
+private val BoxRadius = 14.dp
+private val ChipPaddingX = 10.dp
+private val ChipPaddingY = 5.dp
+private val DotSize = 8.dp
+private val DotGap = 6.dp
+private const val GLOW_ALPHA = 0.35f
+private val ChipFill = Color(GlassPalette.CHIP_FILL)
 
 /**
  * Draws the analysed frame and, on the same pixels, its detections; then reports the render (ADR-011). The frame and
  * the boxes go through one [fitInto], so the overlay cannot drift from the picture (ADR-001).
  *
- * Boxes are drawn for every detection, labels for the first [MAX_LABELS]. Label text is measured once per
- * (class, percent) and reused, so steady state allocates no text layouts.
+ * Boxes are drawn for every detection (rounded, in the class colour, with a soft glow of the same colour), labels for
+ * the first [MAX_LABELS]: a dark pill with a dot in the class colour and white text, readable on any video. Label text
+ * is measured once per (class, percent) and reused, so steady state allocates no text layouts.
  */
 @Composable
 internal fun AnalysedFrame(
@@ -58,10 +61,11 @@ internal fun AnalysedFrame(
 ) {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+    val style =
+        MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR_NUMBERS)
     val labels = remember(labelOf, style, density) { LabelLayouts(measurer, style, labelOf) }
-    val (boxStroke, outlineStroke) =
-        remember(density) { with(density) { Stroke(BoxStroke.toPx()) to Stroke(OutlineStroke.toPx()) } }
+    val (boxStroke, glowStroke) =
+        remember(density) { with(density) { Stroke(BoxStroke.toPx()) to Stroke(GlowStroke.toPx()) } }
     Canvas(modifier.fillMaxSize()) {
         val bitmap = bitmapFor(annotated) ?: return@Canvas
         val fit = fitInto(size.width, size.height, annotated.width.toFloat(), annotated.height.toFloat())
@@ -71,9 +75,10 @@ internal fun AnalysedFrame(
             dstSize = IntSize(fit.width.toInt(), fit.height.toInt()),
         )
         val boxRadius = CornerRadius(BoxRadius.toPx())
-        val chipRadius = CornerRadius(ChipRadius.toPx())
         val chipPaddingX = ChipPaddingX.toPx()
         val chipPaddingY = ChipPaddingY.toPx()
+        val dotDiameter = DotSize.toPx()
+        val dotGap = DotGap.toPx()
         annotated.result.detections.forEachIndexed { index, detection ->
             val box = detection.box
             val left = fit.left + box.left * fit.width
@@ -81,18 +86,28 @@ internal fun AnalysedFrame(
             val boxSize = Size(box.width * fit.width, box.height * fit.height)
             val argb = OverlayPalette.colorOf(detection.label.value)
             val color = Color(argb)
-            drawRoundRect(OutlineColor, Offset(left, top), boxSize, boxRadius, outlineStroke)
+            drawRoundRect(color.copy(alpha = GLOW_ALPHA), Offset(left, top), boxSize, boxRadius, glowStroke)
             drawRoundRect(color, Offset(left, top), boxSize, boxRadius, boxStroke)
             if (index < MAX_LABELS) {
                 val layout = labels.layoutOf(detection.label, (detection.score * PERCENT).toInt())
-                val chipWidth = layout.size.width + 2 * chipPaddingX
+                val chipWidth = dotDiameter + dotGap + layout.size.width + 2 * chipPaddingX
                 val chipHeight = layout.size.height + 2 * chipPaddingY
                 val at = placeChip(left, top, top + boxSize.height, chipWidth, chipHeight, fit)
-                drawRoundRect(color, Offset(at.left, at.top), Size(chipWidth, chipHeight), chipRadius)
+                drawRoundRect(
+                    ChipFill,
+                    Offset(at.left, at.top),
+                    Size(chipWidth, chipHeight),
+                    CornerRadius(chipHeight / 2),
+                )
+                drawCircle(
+                    color,
+                    dotDiameter / 2,
+                    Offset(at.left + chipPaddingX + dotDiameter / 2, at.top + chipHeight / 2),
+                )
                 drawText(
                     layout,
-                    color = Color(Contrast.textOn(argb)),
-                    topLeft = Offset(at.left + chipPaddingX, at.top + chipPaddingY),
+                    color = Color.White,
+                    topLeft = Offset(at.left + chipPaddingX + dotDiameter + dotGap, at.top + chipPaddingY),
                 )
             }
         }

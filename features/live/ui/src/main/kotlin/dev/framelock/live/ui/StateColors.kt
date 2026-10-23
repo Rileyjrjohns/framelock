@@ -1,12 +1,18 @@
 package dev.framelock.live.ui
 
-/** Status colours, chosen for WCAG AA contrast with white text ([Contrast.AA]). They carry meaning, not style. */
+/**
+ * Status colours. They carry meaning, not style, and fill the status chip, which takes [ON_STATE] text: every colour
+ * is light enough for dark text to reach WCAG AA ([Contrast.AA]).
+ */
 internal object StateColors {
-    const val IDLE = 0xFF424242.toInt()
-    const val CONNECTING = 0xFF1A4F8B.toInt()
-    const val RUNNING = 0xFF1B5E20.toInt()
-    const val DEGRADED = 0xFF8A4B00.toInt()
-    const val FAULT = 0xFFB71C1C.toInt()
+    const val IDLE = 0xFF9CA3AF.toInt()
+    const val CONNECTING = 0xFF60A5FA.toInt()
+    const val RUNNING = 0xFF34D399.toInt()
+    const val DEGRADED = 0xFFFBBF24.toInt()
+    const val FAULT = 0xFFF87171.toInt()
+
+    /** Text and dot on a status chip. */
+    const val ON_STATE = GlassPalette.BACKGROUND
 
     val all = intArrayOf(IDLE, CONNECTING, RUNNING, DEGRADED, FAULT)
 }

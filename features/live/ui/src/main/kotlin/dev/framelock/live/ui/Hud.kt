@@ -1,18 +1,22 @@
 package dev.framelock.live.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,7 +45,7 @@ private class HudValues(
     }
 }
 
-/** A compact translucent card of labelled rows; values in a monospaced face so digits do not jump around. */
+/** A glass card of labelled rows in sections; values in tabular figures so digits do not jump around. */
 @Composable
 internal fun Hud(
     live: LiveMetrics,
@@ -51,23 +55,23 @@ internal fun Hud(
     modifier: Modifier = Modifier,
 ) {
     val values = remember(live, thermal, memory) { HudValues(live, thermal.name, memory.name) }
-    Surface(
-        modifier = modifier.widthIn(min = 200.dp, max = 280.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
+    GlassSurface(modifier.widthIn(min = 220.dp, max = 300.dp)) {
         Column(
-            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             // The source line changes only when a session starts.
-            sourceDescription?.let { HudRow(R.string.hud_source, it) }
+            sourceDescription?.let {
+                HudRow(R.string.hud_source, it)
+                Separator()
+            }
             HudRow(R.string.hud_input_fps, values.inputFps)
             HudRow(R.string.hud_inference_fps, values.inferenceFps)
+            Separator()
             HudRow(R.string.hud_inference_ms, values.inferenceMs)
             HudRow(R.string.hud_e2e_ms, values.e2eMs)
             HudRow(R.string.hud_drops, values.drops)
+            Separator()
             HudRow(R.string.hud_thermal, values.thermal)
             HudRow(R.string.hud_memory, values.memory)
         }
@@ -75,21 +79,33 @@ internal fun Hud(
 }
 
 @Composable
+private fun Separator() {
+    Spacer(
+        Modifier
+            .padding(vertical = 2.dp)
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(Color(GlassPalette.BORDER)),
+    )
+}
+
+@Composable
 private fun HudRow(
     label: Int,
     value: String,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    val numbers = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_NUMBERS)
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
             stringResource(label),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = TextSecondary,
             style = MaterialTheme.typography.labelMedium,
         )
         Text(
             value,
             Modifier.weight(1f),
-            style = MaterialTheme.typography.labelLarge,
-            fontFamily = FontFamily.Monospace,
+            color = TextPrimary,
+            style = numbers,
             textAlign = TextAlign.End,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

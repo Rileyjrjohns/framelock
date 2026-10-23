@@ -27,10 +27,17 @@ class ContrastTest {
     }
 
     @Test
-    fun `every status colour reaches AA with white text`() {
+    fun `every status colour reaches AA with the dark chip text`() {
         StateColors.all.forEach { color ->
-            val ratio = Contrast.ratio(color, Contrast.WHITE)
-            assertTrue(ratio >= Contrast.AA, "0x${color.toUInt().toString(16)} has ratio $ratio with white text")
+            val ratio = Contrast.ratio(color, StateColors.ON_STATE)
+            assertTrue(ratio >= Contrast.AA, "0x${color.toUInt().toString(16)} has ratio $ratio with dark text")
         }
+    }
+
+    @Test
+    fun `a translucent colour painted over an opaque one is mixed by its alpha`() {
+        assertEquals(0xFF808080.toInt(), Contrast.over(0x80FFFFFF.toInt(), 0xFF000000.toInt()))
+        assertEquals(0xFF123456.toInt(), Contrast.over(0x00FFFFFF, 0xFF123456.toInt()))
+        assertEquals(0xFFFFFFFF.toInt(), Contrast.over(0xFFFFFFFF.toInt(), 0xFF000000.toInt()))
     }
 }

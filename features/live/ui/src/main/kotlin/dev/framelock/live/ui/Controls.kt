@@ -1,12 +1,11 @@
 package dev.framelock.live.ui
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -19,9 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -34,31 +32,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.framelock.kernel.telemetry.ElementId
-
-/** Minimum touch target: usable with gloves and at a glance (docs/architecture.md, "UI"). */
-private val TouchTarget = 64.dp
-
-/** The primary action is larger still. */
-private val PrimaryTarget = 72.dp
 
 /** Width of the landscape rail. */
 private val RailWidth = 264.dp
 
-private const val SCRIM_ALPHA = 0.72f
-private const val BAR_ALPHA = 0.9f
+private const val SWAP_MILLIS = 200
+private val MenuShape = RoundedCornerShape(20.dp)
 
 /** What the controls show. */
 internal class ControlsState(
@@ -79,88 +67,100 @@ internal class ControlsActions(
     val onTrack: (ElementId) -> Unit,
 )
 
-/** Portrait: a translucent bar over the bottom of the video, fading out upwards. */
+/** Portrait: a glass dock floating over the bottom of the video, 12 dp from the edges and above the navigation inset. */
 @Composable
 internal fun ControlsBar(
     state: ControlsState,
     actions: ControlsActions,
     modifier: Modifier = Modifier,
 ) {
-    val scrim = MaterialTheme.colorScheme.scrim
-    val fade =
-        remember(
-            scrim,
-        ) { Brush.verticalGradient(listOf(Color.Transparent, scrim.copy(SCRIM_ALPHA), scrim.copy(BAR_ALPHA))) }
-    Column(
+    GlassSurface(
         modifier
             .fillMaxWidth()
-            .background(fade)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-            .padding(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(12.dp),
     ) {
-        StartStopButton(state.running, actions, Modifier.fillMaxWidth())
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SourcePicker(state, actions, Modifier.weight(2f))
-            HudToggle(state, actions, Modifier.weight(1f))
-            ModelsButton(actions, Modifier.weight(1f))
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            StartStopButton(state.running, actions, Modifier.fillMaxWidth())
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SourcePicker(state, actions, Modifier.weight(1f))
+                HudToggle(state, actions)
+                ModelsButton(actions)
+            }
         }
     }
 }
 
-/** Landscape: a rail beside the video (capture-card use is mostly landscape), scrollable on a short screen. */
+/**
+ * Landscape: a glass rail beside the video (capture-card use is mostly landscape), so it never covers part of the
+ * analysed frame, scrollable on a short screen. Beside the video there is nothing to blur, so it is a flat fill.
+ */
 @Composable
 internal fun ControlsRail(
     state: ControlsState,
     actions: ControlsActions,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    GlassSurface(
         modifier
-            .width(RailWidth)
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = BAR_ALPHA))
-            .windowInsetsPadding(
-                WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Vertical),
-            ).verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Vertical))
+            .padding(12.dp)
+            .width(RailWidth),
+        blur = false,
     ) {
-        StartStopButton(state.running, actions, Modifier.fillMaxWidth())
-        SourcePicker(state, actions, Modifier.fillMaxWidth())
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            HudToggle(state, actions, Modifier.weight(1f))
-            ModelsButton(actions, Modifier.weight(1f))
+        Column(
+            Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        ) {
+            StartStopButton(state.running, actions, Modifier.fillMaxWidth())
+            SourcePicker(state, actions, Modifier.fillMaxWidth())
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            ) {
+                HudToggle(state, actions)
+                ModelsButton(actions)
+            }
         }
     }
 }
 
-/** Start or Stop: large, with distinct colours (the same green and red as the status they lead to). */
+/** Start (gradient) or Stop (red glass): the primary action, 64 dp high, crossfading when the state changes. */
 @Composable
 private fun StartStopButton(
     running: Boolean,
     actions: ControlsActions,
     modifier: Modifier = Modifier,
 ) {
-    val argb = if (running) StateColors.FAULT else StateColors.RUNNING
-    val label = stringResource(if (running) R.string.action_stop else R.string.action_start)
-    val icon = if (running) R.drawable.ic_stop else R.drawable.ic_play_arrow
-    Button(
-        onClick = if (running) actions.onStop else actions.onStart,
-        modifier =
-            modifier
-                .heightIn(min = PrimaryTarget)
-                .track(if (running) ElementId.STOP else ElementId.START, actions.onTrack),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = ButtonDefaults.buttonColors(containerColor = Color(argb), contentColor = Color.White),
-    ) {
-        Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(32.dp))
-        Text(label, Modifier.padding(start = 8.dp), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+    Crossfade(running, modifier, animationSpec = tween(SWAP_MILLIS), label = "start stop") { isRunning ->
+        val label = stringResource(if (isRunning) R.string.action_stop else R.string.action_start)
+        val icon = if (isRunning) R.drawable.ic_stop else R.drawable.ic_play_arrow
+        GlassButton(
+            onClick = if (isRunning) actions.onStop else actions.onStart,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = TouchTarget)
+                    .track(if (isRunning) ElementId.STOP else ElementId.START, actions.onTrack),
+            look = if (isRunning) ButtonLook.Danger else ButtonLook.Accent,
+        ) {
+            Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(28.dp))
+            Text(
+                label,
+                Modifier.padding(start = 8.dp),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
+        }
     }
 }
 
 /**
- * The source button and its menu. Enabled only while the pipeline is stopped: the source is chosen when a session
+ * The source chip and its menu. Enabled only while the pipeline is stopped: the source is chosen when a session
  * opens, so a change made while running would only apply at the next start. The options are listed afresh each time
  * the menu opens.
  */
@@ -173,7 +173,7 @@ private fun SourcePicker(
     var expanded by remember { mutableStateOf(false) }
     val description = stringResource(R.string.action_source, state.selected.label)
     Box(modifier) {
-        SecondaryButton(
+        GlassButton(
             onClick = {
                 actions.onOpenSources()
                 expanded = true
@@ -181,23 +181,25 @@ private fun SourcePicker(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .heightIn(min = TouchTarget)
                     .semantics { contentDescription = description }
                     .track(ElementId.SELECT_SOURCE, actions.onTrack),
             enabled = !state.running,
         ) {
-            Icon(painterResource(R.drawable.ic_videocam), contentDescription = null)
+            Icon(painterResource(R.drawable.ic_videocam), contentDescription = null, modifier = Modifier.size(24.dp))
             Text(
                 state.selected.label,
-                Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.titleMedium,
+                Modifier.weight(1f).padding(horizontal = 8.dp),
+                style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, modifier = Modifier.size(24.dp))
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, shape = MenuShape) {
             state.options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option.label, style = MaterialTheme.typography.titleMedium) },
+                    text = { Text(option.label, style = MaterialTheme.typography.bodyLarge) },
                     onClick = {
                         expanded = false
                         actions.onSelectSource(option)
@@ -213,70 +215,33 @@ private fun SourcePicker(
 private fun HudToggle(
     state: ControlsState,
     actions: ControlsActions,
-    modifier: Modifier = Modifier,
 ) {
-    val colors = MaterialTheme.colorScheme
-    SecondaryButton(
+    IconAction(
+        icon = R.drawable.ic_bug_report,
+        description = stringResource(R.string.action_hud),
         onClick = actions.onToggleHud,
-        modifier = modifier.track(ElementId.TOGGLE_HUD, actions.onTrack),
-        container = if (state.hudVisible) colors.primaryContainer else colors.surfaceContainerHighest,
-        content = if (state.hudVisible) colors.onPrimaryContainer else colors.onSurface,
-        stacked = true,
-    ) {
-        TileContent(R.drawable.ic_bug_report, stringResource(R.string.action_hud))
-    }
+        modifier = Modifier.track(ElementId.TOGGLE_HUD, actions.onTrack),
+        look = if (state.hudVisible) ButtonLook.Selected else ButtonLook.Glass,
+    )
 }
 
 @Composable
-private fun ModelsButton(
-    actions: ControlsActions,
-    modifier: Modifier = Modifier,
-) {
-    SecondaryButton(actions.onOpenModels, modifier, stacked = true) {
-        TileContent(R.drawable.ic_neurology, stringResource(R.string.action_models))
-    }
+private fun ModelsButton(actions: ControlsActions) {
+    IconAction(R.drawable.ic_neurology, stringResource(R.string.action_models), actions.onOpenModels)
 }
 
-/** An icon over a short label, for the narrow buttons. */
+/** A 64 dp circle of glass holding one icon; [description] is what a screen reader says. */
 @Composable
-private fun TileContent(
+private fun IconAction(
     icon: Int,
-    label: String,
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(painterResource(icon), contentDescription = null)
-        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, textAlign = TextAlign.Center)
-    }
-}
-
-/** The quieter buttons next to Start/Stop: tonal, translucent-friendly, and never below [TouchTarget]. */
-@Composable
-private fun SecondaryButton(
+    description: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    container: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    content: Color = MaterialTheme.colorScheme.onSurface,
-    stacked: Boolean = false,
-    label: @Composable RowScope.() -> Unit,
+    look: ButtonLook = ButtonLook.Glass,
 ) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = TouchTarget),
-        enabled = enabled,
-        shape = MaterialTheme.shapes.large,
-        colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = content),
-        contentPadding =
-            if (stacked) {
-                PaddingValues(
-                    horizontal = 4.dp,
-                    vertical = 6.dp,
-                )
-            } else {
-                PaddingValues(horizontal = 12.dp)
-            },
-        content = label,
-    )
+    GlassButton(onClick, modifier.size(TouchTarget), look = look, contentPadding = 0.dp) {
+        Icon(painterResource(icon), contentDescription = description, modifier = Modifier.size(28.dp))
+    }
 }
 
 @Preview(widthDp = 400)
@@ -289,7 +254,7 @@ private fun ControlsBarPreview() {
     )
 }
 
-@Preview(widthDp = 264, heightDp = 360)
+@Preview(widthDp = 288, heightDp = 400)
 @Composable
 private fun ControlsRailPreview() {
     val auto = SourceOption("auto", "Auto")

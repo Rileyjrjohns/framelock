@@ -1,53 +1,149 @@
 package dev.framelock.live.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.framelock.kernel.model.ModelVersion
+import dev.framelock.live.application.metrics.LiveMetrics
 import dev.framelock.live.application.pipeline.PipelineUiState
 import dev.framelock.live.application.usecase.StartResult
 import dev.framelock.live.domain.pipeline.PipelineState
 import java.util.Locale
 
-/** The state pill, and under it the reason a start did not go through. Readable at a glance (docs/architecture.md). */
+private const val PULSE_LOW = 0.4f
+private const val PULSE_MILLIS = 900
+private const val COLOR_MILLIS = 200
+private val DotSize = 10.dp
+
+/** What the compact figures at the end of the top bar show. */
+private class Readout(
+    live: LiveMetrics,
+) {
+    val fps = String.format(Locale.ROOT, "%.0f", live.inferenceFps)
+    val ms = (live.e2eMs ?: live.inferenceMs)?.let { String.format(Locale.ROOT, "%.0f", it) } ?: "–"
+}
+
+/**
+ * The top glass bar: the state as a filled chip, readable at a glance (docs/architecture.md), the model version, and,
+ * while the HUD is off and frames are being analysed, the rate and latency. Under it, the reason a start did not go
+ * through.
+ */
 @Composable
 internal fun StatusOverlay(
     ui: PipelineUiState,
     startResult: StartResult?,
+    live: LiveMetrics,
+    showReadout: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        StatusPill(ui)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TopBar(ui, live, showReadout)
         StartMessage(startResult)
     }
 }
 
 @Composable
-private fun StatusPill(ui: PipelineUiState) {
-    val (text, color) = bannerOf(ui.state)
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = Color(color),
-        contentColor = Color.White,
-    ) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-            Text(text, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            ui.model?.let { Text(stringResource(R.string.model_version, it.value), fontSize = 16.sp) }
+private fun TopBar(
+    ui: PipelineUiState,
+    live: LiveMetrics,
+    showReadout: Boolean,
+) {
+    val analysing = ui.state is PipelineState.Running || ui.state is PipelineState.Degraded
+    val readout = if (showReadout && analysing) remember(live) { Readout(live) } else null
+    val numbers = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_NUMBERS)
+    GlassSurface(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            StatusChip(ui.state)
+            Box(Modifier.weight(1f)) {
+                ui.model?.let {
+                    Text(
+                        stringResource(R.string.model_version, it.value),
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            readout?.let {
+                Text(
+                    stringResource(R.string.readout, it.fps, it.ms),
+                    color = TextPrimary,
+                    style = numbers,
+                    maxLines = 1,
+                )
+            }
         }
     }
+}
+
+/** A filled pill in the state's colour with dark text, and a pulsing dot while running. */
+@Composable
+private fun StatusChip(state: PipelineState) {
+    val (text, argb) = bannerOf(state)
+    val fill by animateColorAsState(Color(argb), tween(COLOR_MILLIS), label = "state colour")
+    val onState = Color(StateColors.ON_STATE)
+    Row(
+        Modifier.clip(CircleShape).background(fill).padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (state is PipelineState.Running) PulsingDot(onState)
+        Text(
+            text,
+            color = onState,
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun PulsingDot(color: Color) {
+    val pulse = rememberInfiniteTransition(label = "pulse")
+    val alpha by pulse.animateFloat(
+        PULSE_LOW,
+        1f,
+        infiniteRepeatable(tween(PULSE_MILLIS), RepeatMode.Reverse),
+        label = "pulse alpha",
+    )
+    Box(
+        Modifier
+            .size(DotSize)
+            .graphicsLayer { this.alpha = alpha }
+            .background(color, CircleShape),
+    )
 }
 
 /** Why nothing is running: no model installed, or the active one did not load. */
@@ -68,18 +164,18 @@ private fun StartMessage(startResult: StartResult?) {
                 return
             }
         }
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = if (error) colors.errorContainer else colors.surfaceContainerHigh,
-        contentColor = if (error) colors.onErrorContainer else colors.onSurface,
-    ) {
-        Text(text, Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+    GlassSurface(Modifier.fillMaxWidth()) {
+        val tint = if (error) Color(GlassPalette.DANGER_FILL) else Color.Transparent
+        Text(
+            text,
+            Modifier.fillMaxWidth().background(tint).padding(horizontal = 20.dp, vertical = 16.dp),
+            color = TextPrimary,
+            style = MaterialTheme.typography.bodyLarge,
+        )
     }
 }
 
-/** Colours are [StateColors], chosen for WCAG AA contrast with white text. */
+/** Colours are [StateColors], chosen for WCAG AA contrast with the dark chip text. */
 @Composable
 private fun bannerOf(state: PipelineState): Pair<String, Int> =
     when (state) {
@@ -117,5 +213,7 @@ private fun StatusOverlayPreview() {
     StatusOverlay(
         PipelineUiState(PipelineState.Connecting, annotated = null, model = ModelVersion("1.0.0")),
         StartResult.NoActiveModel,
+        LiveMetrics.EMPTY,
+        showReadout = true,
     )
 }

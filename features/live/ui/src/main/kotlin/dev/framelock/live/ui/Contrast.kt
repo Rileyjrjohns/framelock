@@ -34,6 +34,21 @@ internal object Contrast {
         return (maxOf(a, b) + FLARE) / (minOf(a, b) + FLARE)
     }
 
+    /** [top] (with its alpha) painted over the opaque [bottom], as an opaque colour. */
+    fun over(
+        top: Int,
+        bottom: Int,
+    ): Int {
+        val alpha = (top ushr ALPHA_SHIFT and BYTE_MASK) / BYTE
+
+        fun mix(shift: Int): Int {
+            val fore = top shr shift and BYTE_MASK
+            val back = bottom shr shift and BYTE_MASK
+            return Math.round(fore * alpha + back * (1 - alpha)).toInt()
+        }
+        return OPAQUE or (mix(RED_SHIFT) shl RED_SHIFT) or (mix(GREEN_SHIFT) shl GREEN_SHIFT) or mix(0)
+    }
+
     /** Black or white, whichever reads better on [background]. */
     fun textOn(background: Int): Int = if (ratio(background, BLACK) >= ratio(background, WHITE)) BLACK else WHITE
 
@@ -50,5 +65,7 @@ internal object Contrast {
     const val WHITE = 0xFFFFFFFF.toInt()
     private const val RED_SHIFT = 16
     private const val GREEN_SHIFT = 8
+    private const val ALPHA_SHIFT = 24
     private const val BYTE_MASK = 0xFF
+    private const val OPAQUE = 0xFF000000.toInt()
 }
