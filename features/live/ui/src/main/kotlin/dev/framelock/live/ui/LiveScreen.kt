@@ -234,22 +234,30 @@ private fun Controls(
     onToggleHud: () -> Unit,
     onTrack: (ElementId) -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth().padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    // Two rows: three buttons side by side do not fit a phone in portrait.
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            SourcePicker(
+                !running,
+                selected,
+                options,
+                onOpenSources,
+                onSelectSource,
+                onTrack,
+                Modifier.weight(1f),
+            )
+            OutlinedButton(onToggleHud, Modifier.heightIn(min = TouchTarget).track(ElementId.TOGGLE_HUD, onTrack)) {
+                Text(stringResource(R.string.action_hud), color = MaterialTheme.colorScheme.onPrimary)
+            }
+        }
         if (running) {
-            Button(onStop, Modifier.weight(1f).heightIn(min = TouchTarget).track(ElementId.STOP, onTrack)) {
+            Button(onStop, Modifier.fillMaxWidth().heightIn(min = TouchTarget).track(ElementId.STOP, onTrack)) {
                 Text(stringResource(R.string.action_stop), fontSize = 22.sp)
             }
         } else {
-            Button(onStart, Modifier.weight(1f).heightIn(min = TouchTarget).track(ElementId.START, onTrack)) {
+            Button(onStart, Modifier.fillMaxWidth().heightIn(min = TouchTarget).track(ElementId.START, onTrack)) {
                 Text(stringResource(R.string.action_start), fontSize = 22.sp)
             }
-        }
-        SourcePicker(!running, selected, options, onOpenSources, onSelectSource, onTrack)
-        OutlinedButton(onToggleHud, Modifier.heightIn(min = TouchTarget).track(ElementId.TOGGLE_HUD, onTrack)) {
-            Text(stringResource(R.string.action_hud), color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }
@@ -267,15 +275,16 @@ private fun SourcePicker(
     onOpen: () -> Unit,
     onSelect: (SourceOption) -> Unit,
     onTrack: (ElementId) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
+    Box(modifier) {
         OutlinedButton(
             onClick = {
                 onOpen()
                 expanded = true
             },
-            modifier = Modifier.heightIn(min = TouchTarget).track(ElementId.SELECT_SOURCE, onTrack),
+            modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget).track(ElementId.SELECT_SOURCE, onTrack),
             enabled = enabled,
         ) {
             Text(stringResource(R.string.action_source, selected.label), color = MaterialTheme.colorScheme.onPrimary)
