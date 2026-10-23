@@ -7,6 +7,7 @@ import android.view.Display
 import android.view.Surface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraState
+import androidx.camera.core.ExperimentalLensFacing
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.resolutionselector.ResolutionSelector
@@ -26,6 +27,7 @@ import dev.framelock.live.domain.frame.Frame
 import dev.framelock.live.domain.frame.FrameIdSequence
 import dev.framelock.live.domain.frame.ImageFormat
 import dev.framelock.live.domain.frame.SessionId
+import dev.framelock.live.domain.frame.SessionIdSequence
 import dev.framelock.live.domain.frame.StreamSpec
 import dev.framelock.live.domain.frame.TimestampSource
 import dev.framelock.live.domain.port.FrameSource
@@ -37,7 +39,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicLong
+
+/** Which camera a [CameraXFrameSource] binds to. */
+enum class CameraFacing { BACK, EXTERNAL }
 
 /**
  * [FrameSource] over CameraX `ImageAnalysis` (the fallback source, works without a capture card).
@@ -45,11 +49,15 @@ import java.util.concurrent.atomic.AtomicLong
  * - Each image is copied into a [YuvFramePool] buffer and returned to CameraX at once; when the pool is empty the
  *   image is skipped (ADR-010).
  * - A session starts at the first image after [open]: `Connected` carries the real resolution and timestamp base.
- *   Session ids keep increasing for the lifetime of this source.
+ *   Session ids keep increasing across every source sharing the [SessionIdSequence].
  * - Frames are delivered upright: CameraX rotates them to the display rotation, so `Frame.width`/`height` are the
  *   rotated size. A rotation while open changes that size and swaps the pool, but keeps the session.
  * - A camera error ends the session with `Disconnected(STREAM_ERROR)`.
  * - Events that are never collected are released: the channel closes their buffers.
+ *
+ * [facing] is the back camera by default; [CameraFacing.EXTERNAL] selects a camera that Camera2 exposes as external
+ * (see [CameraXCameras.hasExternal]). Session ids come from a [SessionIdSequence] shared with the
+ * other sources, so they keep increasing when the app switches source.
  *
  * The camera binds to a lifecycle this source owns, so the pipeline, not a screen, decides when it runs.
  */
@@ -57,7 +65,9 @@ class CameraXFrameSource(
     private val context: Context,
     private val clock: Clock,
     private val tracer: Tracer,
+    private val sessionIds: SessionIdSequence,
     private val requestedSize: Size = Size(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+    private val facing: CameraFacing = CameraFacing.BACK,
 ) : FrameSource {
     private val channel =
         Channel<SourceEvent>(Channel.UNLIMITED) { event ->
@@ -67,7 +77,6 @@ class CameraXFrameSource(
 
     private val lifecycleOwner = SourceLifecycleOwner()
     private val analysisExecutor: ExecutorService = Executors.newSingleThreadExecutor { Thread(it, "camera-analysis") }
-    private val lastSession = AtomicLong(0)
     private val frameIds = FrameIdSequence()
 
     // Touched only on the analysis thread, except [session] which open() and close() reset on the main thread.
@@ -80,6 +89,22 @@ class CameraXFrameSource(
     private var stateObserver: Observer<CameraState>? = null
     private var analysis: ImageAnalysis? = null
     private var displayListener: DisplayManager.DisplayListener? = null
+
+    @androidx.annotation.OptIn(ExperimentalLensFacing::class)
+    private fun selector(): CameraSelector =
+        when (facing) {
+            CameraFacing.BACK -> {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
+
+            CameraFacing.EXTERNAL -> {
+                CameraSelector
+                    .Builder()
+                    .requireLensFacing(
+                        CameraSelector.LENS_FACING_EXTERNAL,
+                    ).build()
+            }
+        }
 
     override suspend fun open() =
         withContext(Dispatchers.Main) {
@@ -103,10 +128,10 @@ class CameraXFrameSource(
                                 ),
                             ).build(),
                     ).build()
-            session = SessionId(lastSession.incrementAndGet())
+            session = sessionIds.next()
             connected = false
             analysis.setAnalyzer(analysisExecutor, ::onImage)
-            val camera = cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, analysis)
+            val camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector(), analysis)
             val observer = Observer<CameraState> { state -> if (state.error != null) onCameraError() }
             camera.cameraInfo.cameraState.observe(lifecycleOwner, observer)
             stateObserver = observer

@@ -4,4 +4,9 @@ plugins {
 
 dependencies {
     api(projects.features.live.domain)
+    implementation(libs.uvc.android)
+    implementation(libs.androidx.core)
+    implementation(platform(libs.kotlinx.coroutines.bom))
+    implementation(libs.kotlinx.coroutines.core)
+    testImplementation(projects.shared.testing)
 }
