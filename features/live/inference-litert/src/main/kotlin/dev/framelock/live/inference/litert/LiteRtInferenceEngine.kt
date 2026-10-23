@@ -5,6 +5,7 @@ import dev.framelock.kernel.port.TraceSection
 import dev.framelock.kernel.port.Tracer
 import dev.framelock.kernel.port.trace
 import dev.framelock.live.domain.frame.Frame
+import dev.framelock.live.domain.frame.ImageFormat
 import dev.framelock.live.domain.inference.InferenceResult
 import dev.framelock.live.domain.port.InferenceEngine
 import kotlinx.coroutines.CoroutineDispatcher
@@ -59,14 +60,34 @@ class LiteRtInferenceEngine(
         val model = checkNotNull(loaded) { "No model loaded" }
         tracer.trace(TraceSection.PREPROCESS) {
             model.input.clear()
-            YuvToRgb.scaleInto(
-                frame.image.planes,
-                frame.width,
-                frame.height,
-                model.input,
-                model.inputWidth,
-                model.inputHeight,
-            )
+            val image = frame.image
+            when (image.format) {
+                ImageFormat.YUV_420_888 -> {
+                    YuvToRgb.scaleInto(
+                        image.planes,
+                        frame.width,
+                        frame.height,
+                        model.input,
+                        model.inputWidth,
+                        model.inputHeight,
+                    )
+                }
+
+                ImageFormat.RGBA_8888 -> {
+                    RgbaToRgb.scaleInto(
+                        image.planes.single(),
+                        frame.width,
+                        frame.height,
+                        model.input,
+                        model.inputWidth,
+                        model.inputHeight,
+                    )
+                }
+
+                else -> {
+                    throw IllegalArgumentException("Unsupported frame format ${image.format}")
+                }
+            }
             model.input.rewind()
             model.outputs.values.forEach { it.clear() }
         }
