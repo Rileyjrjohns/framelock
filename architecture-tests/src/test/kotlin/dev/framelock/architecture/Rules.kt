@@ -48,6 +48,13 @@ internal object Rules {
             "AuditLog",
         )
 
+    /**
+     * Port implementations the app may host: composites that only delegate to adapters, because only `:app` sees all
+     * of them. Each one is a reviewed entry (ADR-016, amending ADR-006): class to the port it implements.
+     */
+    val APP_COMPOSITES =
+        mapOf("dev.framelock.app.SelectingFrameSource" to "dev.framelock.live.domain.port.FrameSource")
+
     /** `dev.framelock.kernel.port` or `dev.framelock.<feature>.domain.port` (ADR-014). */
     private val PORT_PACKAGE = Regex("""^dev\.framelock\.(kernel|[a-z]+\.domain)\.port$""")
 
@@ -126,7 +133,9 @@ internal object Rules {
             .filter { it.file in restricted && it.fqn !in ports }
             .forEach { type ->
                 val implemented = index.supertypesOf(type) intersect ports
-                implemented.forEach { violations += "${type.fqn} implements port $it outside adapters (${type.file})" }
+                implemented
+                    .filterNot { APP_COMPOSITES[type.fqn] == it }
+                    .forEach { violations += "${type.fqn} implements port $it outside adapters (${type.file})" }
             }
         restricted.forEach { file ->
             OBJECT_EXPRESSION.findAll(file.code).forEach { match ->

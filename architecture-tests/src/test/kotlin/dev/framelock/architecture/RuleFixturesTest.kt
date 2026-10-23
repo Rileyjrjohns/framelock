@@ -60,6 +60,7 @@ class RuleFixturesTest {
                 "dev.framelock.app.IndirectDeviceInfo implements port $port.DeviceInfoProvider outside adapters",
                 "dev.framelock.app.AliasedClock implements port $port.Clock outside adapters",
                 "dev.framelock.app.DebugTracer implements port $port.Tracer outside adapters",
+                "dev.framelock.app.OtherSource implements port $port.FrameSource outside adapters",
             ),
             violations.map { it.substringBefore(" (") }.toSet(),
             violations.joinToString("\n"),

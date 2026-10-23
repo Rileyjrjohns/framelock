@@ -10,6 +10,8 @@ interface DeviceInfoProvider
 
 interface Clock
 
+interface FrameSource
+
 fun interface TelemetrySink {
     fun record(event: Any)
 }

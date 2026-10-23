@@ -9,7 +9,12 @@ import dev.framelock.live.application.usecase.ObservePipeline
 import dev.framelock.live.application.usecase.ReportFrameRendered
 import dev.framelock.live.application.usecase.StartPipeline
 import dev.framelock.live.application.usecase.StopPipeline
+import dev.framelock.live.capture.camerax.CameraFacing
+import dev.framelock.live.capture.camerax.CameraXCameras
 import dev.framelock.live.capture.camerax.CameraXFrameSource
+import dev.framelock.live.capture.uvc.UvcDevices
+import dev.framelock.live.capture.uvc.UvcFrameSource
+import dev.framelock.live.domain.frame.SessionIdSequence
 import dev.framelock.live.domain.policy.ReconnectConfig
 import dev.framelock.live.domain.policy.ReconnectPolicy
 import dev.framelock.live.inference.litert.LiteRtInferenceEngine
@@ -49,9 +54,27 @@ class AppGraph(
 
     private val developmentModel = DevelopmentModel(context.applicationContext)
     private val metrics = MetricsAggregator(clock, record)
+
+    // One sequence for every source: the pipeline refuses a session id that does not increase (ADR-016).
+    private val sessionIds = SessionIdSequence()
+    private val source =
+        SelectingFrameSource(
+            external =
+                CameraXFrameSource(
+                    context.applicationContext,
+                    clock,
+                    tracer,
+                    sessionIds,
+                    facing = CameraFacing.EXTERNAL,
+                ),
+            uvc = UvcFrameSource(context.applicationContext, clock, tracer, sessionIds),
+            back = CameraXFrameSource(context.applicationContext, clock, tracer, sessionIds),
+            hasExternalCamera = { CameraXCameras.hasExternal(context.applicationContext) },
+            hasUvcDevice = { UvcDevices.isAttached(context.applicationContext) },
+        )
     private val pipeline =
         InferencePipeline(
-            source = CameraXFrameSource(context.applicationContext, clock, tracer),
+            source = source,
             engine = LiteRtInferenceEngine(tracer),
             thermal = PowerManagerThermalMonitor(context.applicationContext),
             memory = NotYetObservedMemoryPressure(),

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- USB video class (0x0E = 14): capture cards and webcams. Lets Android grant the app access to them by default. -->
+<resources>
+    <usb-device class="14" />
+</resources>
