@@ -8,7 +8,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 /**
- * Runs `verifyModuleBoundaries` on throwaway builds whose modules use the real project paths.
+ * Runs `verifyModuleBoundaries` on throwaway builds whose modules use the real project paths (ADR-014).
  * Plain `java-library` modules stand in for Kotlin and Android ones: the role comes from the path only.
  */
 class ModuleBoundariesPluginTest {
@@ -18,159 +18,194 @@ class ModuleBoundariesPluginTest {
     @Test
     fun `valid dependency graph passes`() {
         writeBuild(
-            ":core:application" to "implementation(project(\":core:domain\"))",
-            ":core:testing" to "api(project(\":core:domain\"))",
-            ":adapters:a" to "api(project(\":core:domain\"))",
+            LIVE_DOMAIN to "api(project(\"$KERNEL\"))\nimplementation(\"org.jetbrains:annotations:26.0.2\")",
+            LIVE_APPLICATION to "api(project(\"$LIVE_DOMAIN\"))",
+            LIVE_A to "api(project(\"$LIVE_DOMAIN\"))",
+            LIVE_UI to "implementation(project(\"$LIVE_APPLICATION\"))",
+            MODELS_DOMAIN to "api(project(\"$LIVE_DOMAIN\"))",
+            MODELS_APPLICATION to "api(project(\"$MODELS_DOMAIN\"))\napi(project(\"$LIVE_APPLICATION\"))",
+            TESTING to "api(project(\"$LIVE_DOMAIN\"))\napi(project(\"$MODELS_DOMAIN\"))",
             ":app" to
                 """
-                implementation(project(":core:application"))
-                implementation(project(":adapters:a"))
-                testImplementation(project(":core:testing"))
+                implementation(project("$MODELS_APPLICATION"))
+                implementation(project("$LIVE_A"))
+                implementation(project("$LIVE_UI"))
+                testImplementation(project("$TESTING"))
                 """,
-            ":core:domain" to "implementation(\"org.jetbrains:annotations:26.0.2\")",
         )
 
-        val result = run(expectFailure = false)
-
-        assertTrue(result.output.contains("BUILD SUCCESSFUL"), result.output)
+        assertSuccess()
     }
 
     @Test
     fun `adapter depending on another adapter fails`() {
-        writeBuild(":adapters:a" to "implementation(project(\":adapters:b\"))")
+        writeBuild(LIVE_A to "implementation(project(\"$LIVE_B\"))")
 
-        assertViolation("ADAPTER may not reach :adapters:b")
+        assertViolation("ADAPTER(live) may not reach $LIVE_B")
     }
 
     @Test
-    fun `adapter depending on core application fails`() {
-        writeBuild(":adapters:a" to "implementation(project(\":core:application\"))")
+    fun `adapter depending on an application fails`() {
+        writeBuild(LIVE_A to "implementation(project(\"$LIVE_APPLICATION\"))")
 
-        assertViolation("ADAPTER may not reach :core:application")
+        assertViolation("ADAPTER(live) may not reach $LIVE_APPLICATION")
     }
 
     @Test
-    fun `core domain depending on any project fails`() {
-        writeBuild(":core:domain" to "implementation(project(\":core:testing\"))")
+    fun `domain depending on its application fails`() {
+        writeBuild(LIVE_DOMAIN to "implementation(project(\"$LIVE_APPLICATION\"))")
 
-        assertViolation("CORE_DOMAIN may not reach :core:testing")
+        assertViolation("DOMAIN(live) may not reach $LIVE_APPLICATION")
     }
 
     @Test
-    fun `core application depending on an adapter fails`() {
-        writeBuild(":core:application" to "implementation(project(\":adapters:a\"))")
+    fun `application depending on an adapter fails`() {
+        writeBuild(LIVE_APPLICATION to "implementation(project(\"$LIVE_A\"))")
 
-        assertViolation("CORE_APPLICATION may not reach :adapters:a")
+        assertViolation("APPLICATION(live) may not reach $LIVE_A")
+    }
+
+    @Test
+    fun `kernel depending on any project fails`() {
+        writeBuild(KERNEL to "implementation(project(\"$LIVE_DOMAIN\"))")
+
+        assertViolation("KERNEL may not reach $LIVE_DOMAIN")
+    }
+
+    @Test
+    fun `upstream feature depending on a downstream feature fails`() {
+        writeBuild(LIVE_DOMAIN to "implementation(project(\"$MODELS_DOMAIN\"))")
+
+        assertViolation("DOMAIN(live) may not reach $MODELS_DOMAIN (DOMAIN(models))")
+    }
+
+    @Test
+    fun `downstream feature may depend on an upstream feature`() {
+        writeBuild(
+            MODELS_DOMAIN to "api(project(\"$LIVE_DOMAIN\"))",
+            MODELS_APPLICATION to "api(project(\"$LIVE_APPLICATION\"))",
+            LIVE_APPLICATION to "api(project(\"$LIVE_DOMAIN\"))",
+        )
+
+        assertSuccess()
+    }
+
+    @Test
+    fun `module of an unknown feature fails`() {
+        writeBuild(extraModules = listOf(":features:payments:domain"))
+
+        val result = run(expectFailure = true)
+
+        assertTrue(result.output.contains("unknown feature 'payments'"), result.output)
     }
 
     @Test
     fun `depending on app fails`() {
-        writeBuild(":adapters:a" to "testImplementation(project(\":app\"))")
+        writeBuild(LIVE_A to "testImplementation(project(\":app\"))")
 
-        assertViolation("ADAPTER may not reach :app")
+        assertViolation("ADAPTER(live) may not reach :app")
     }
 
     @Test
-    fun `main configuration depending on core testing fails`() {
-        writeBuild(":adapters:a" to "implementation(project(\":core:testing\"))")
+    fun `main configuration depending on testing fails`() {
+        writeBuild(LIVE_A to "implementation(project(\"$TESTING\"))")
 
-        assertViolation("ADAPTER may not reach :core:testing")
+        assertViolation("ADAPTER(live) may not reach $TESTING")
     }
 
     @Test
-    fun `test configuration may depend on core testing`() {
+    fun `test configuration may depend on testing`() {
         writeBuild(
-            ":core:testing" to "api(project(\":core:domain\"))",
-            ":core:application" to "testImplementation(project(\":core:testing\"))",
-            ":adapters:a" to "testImplementation(project(\":core:testing\"))",
+            TESTING to "api(project(\"$LIVE_DOMAIN\"))\napi(project(\"$MODELS_DOMAIN\"))",
+            MODELS_DOMAIN to "api(project(\"$LIVE_DOMAIN\"))",
+            LIVE_APPLICATION to "testImplementation(project(\"$TESTING\"))",
+            LIVE_A to "testImplementation(project(\"$TESTING\"))",
         )
 
-        val result = run(expectFailure = false)
-
-        assertTrue(result.output.contains("BUILD SUCCESSFUL"), result.output)
+        assertSuccess()
     }
 
     @Test
     fun `dependency substitution to another adapter fails`() {
         writeBuild(
-            ":adapters:a" to
+            LIVE_A to
                 """
                 implementation("org.example:extra:1.0")
                 configurations.configureEach {
                     resolutionStrategy.dependencySubstitution {
-                        substitute(module("org.example:extra")).using(project(":adapters:b"))
+                        substitute(module("org.example:extra")).using(project("$LIVE_B"))
                     }
                 }
                 """,
         )
 
-        assertViolation("ADAPTER may not reach :adapters:b (ADAPTER) on 'compileClasspath'")
+        assertViolation("ADAPTER(live) may not reach $LIVE_B (ADAPTER(live)) on 'compileClasspath'")
     }
 
     @Test
-    fun `custom configuration extended by main cannot carry core testing`() {
+    fun `custom configuration extended by main cannot carry testing`() {
         writeBuild(
-            ":core:testing" to "api(project(\":core:domain\"))",
-            ":core:application" to
+            TESTING to "api(project(\"$KERNEL\"))",
+            LIVE_APPLICATION to
                 """
                 val sharedTestSupport = configurations.create("sharedTestSupport")
                 configurations.named("implementation") { extendsFrom(sharedTestSupport) }
-                sharedTestSupport(project(":core:testing"))
+                sharedTestSupport(project("$TESTING"))
                 """,
         )
 
-        assertViolation("CORE_APPLICATION may not reach :core:testing (CORE_TESTING) on 'compileClasspath'")
+        assertViolation("APPLICATION(live) may not reach $TESTING (TESTING) on 'compileClasspath'")
     }
 
     @Test
-    fun `production classpath whose name contains Test cannot carry core testing`() {
+    fun `production classpath whose name contains Test cannot carry testing`() {
         writeBuild(
-            ":core:testing" to "api(project(\":core:domain\"))",
+            TESTING to "api(project(\"$KERNEL\"))",
             ":app" to
                 """
                 val abTest = configurations.create("abTestImplementation")
                 configurations.create("abTestReleaseRuntimeClasspath") { extendsFrom(abTest) }
-                abTest(project(":core:testing"))
+                abTest(project("$TESTING"))
                 """,
         )
 
-        assertViolation("APP may not reach :core:testing (CORE_TESTING) on 'abTestReleaseRuntimeClasspath'")
+        assertViolation("APP may not reach $TESTING (TESTING) on 'abTestReleaseRuntimeClasspath'")
     }
 
     @Test
-    fun `test fixtures of core cannot carry core testing to an adapter`() {
+    fun `test fixtures of a domain cannot carry testing to an adapter`() {
         writeBuild(
-            ":core:testing" to "api(project(\":core:domain\"))",
-            ":core:domain" to "testFixturesApi(project(\":core:testing\"))",
-            ":adapters:a" to "implementation(testFixtures(project(\":core:domain\")))",
-            plugins = mapOf(":core:domain" to "`java-test-fixtures`"),
+            TESTING to "api(project(\"$KERNEL\"))",
+            LIVE_DOMAIN to "testFixturesApi(project(\"$TESTING\"))",
+            LIVE_A to "implementation(testFixtures(project(\"$LIVE_DOMAIN\")))",
+            plugins = mapOf(LIVE_DOMAIN to "`java-test-fixtures`"),
         )
 
-        assertViolation("CORE_DOMAIN may not reach :core:testing (CORE_TESTING) on 'testFixturesCompileClasspath'")
-        assertViolation("ADAPTER may not reach :core:testing (CORE_TESTING) on 'compileClasspath'")
+        assertViolation("DOMAIN(live) may not reach $TESTING (TESTING) on 'testFixturesCompileClasspath'")
+        assertViolation("ADAPTER(live) may not reach $TESTING (TESTING) on 'compileClasspath'")
     }
 
     @Test
     fun `transitive edge is checked`() {
         writeBuild(
-            ":core:testing" to "api(project(\":core:domain\"))",
-            ":adapters:b" to "api(project(\":core:testing\"))",
-            ":app" to "implementation(project(\":adapters:b\"))",
+            TESTING to "api(project(\"$KERNEL\"))",
+            LIVE_B to "api(project(\"$TESTING\"))",
+            ":app" to "implementation(project(\"$LIVE_B\"))",
         )
 
-        assertViolation("APP may not reach :core:testing (CORE_TESTING) on 'compileClasspath'")
+        assertViolation("APP may not reach $TESTING (TESTING) on 'compileClasspath'")
     }
 
     @Test
-    fun `files dependency in core fails`() {
-        writeBuild(":core:domain" to "compileOnly(files(\"libs/annotations.jar\"))")
+    fun `files dependency in a pure module fails`() {
+        writeBuild(LIVE_DOMAIN to "compileOnly(files(\"libs/annotations.jar\"))")
 
-        assertViolation("CORE_DOMAIN may not declare files(...) dependencies, found on 'compileOnly'")
+        assertViolation("DOMAIN(live) may not declare files(...) dependencies, found on 'compileOnly'")
     }
 
     @Test
     fun `DI library in an adapter fails`() {
-        writeBuild(":adapters:a" to "implementation(\"javax.inject:javax.inject:1\")")
+        writeBuild(LIVE_A to "implementation(\"javax.inject:javax.inject:1\")")
 
         assertViolation(
             "No DI framework or annotation library is allowed: javax.inject:javax.inject on 'compileClasspath'",
@@ -178,38 +213,36 @@ class ModuleBoundariesPluginTest {
     }
 
     @Test
-    fun `DI library brought transitively by a third-party library is allowed outside core`() {
-        writeBuild(":adapters:a" to "implementation(\"org.example:uses-dagger:1.0\")")
+    fun `DI library brought transitively by a third-party library is allowed outside pure modules`() {
+        writeBuild(LIVE_A to "implementation(\"org.example:uses-dagger:1.0\")")
 
-        val result = run(expectFailure = false)
-
-        assertTrue(result.output.contains("BUILD SUCCESSFUL"), result.output)
+        assertSuccess()
     }
 
     @Test
-    fun `DI library brought transitively is refused in core`() {
-        writeBuild(":core:domain" to "implementation(\"org.example:uses-dagger:1.0\")")
+    fun `DI library brought transitively is refused in a pure module`() {
+        writeBuild(LIVE_DOMAIN to "implementation(\"org.example:uses-dagger:1.0\")")
 
         assertViolation("found com.google.dagger:dagger on 'compileClasspath'")
     }
 
     @Test
-    fun `core module with an extra external library fails`() {
-        writeBuild(":core:application" to "implementation(\"org.example:extra:1.0\")")
+    fun `pure module with an extra external library fails`() {
+        writeBuild(LIVE_APPLICATION to "implementation(\"org.example:extra:1.0\")")
 
         assertViolation("found org.example:extra on 'compileClasspath'")
     }
 
     @Test
-    fun `core module with a runtime only external library fails`() {
-        writeBuild(":core:domain" to "runtimeOnly(\"org.example:extra:1.0\")")
+    fun `pure module with a runtime only external library fails`() {
+        writeBuild(LIVE_DOMAIN to "runtimeOnly(\"org.example:extra:1.0\")")
 
         assertViolation("found org.example:extra on 'runtimeClasspath'")
     }
 
     @Test
-    fun `compileOnly DI annotation in core fails`() {
-        writeBuild(":core:domain" to "compileOnly(\"javax.inject:javax.inject:1\")")
+    fun `compileOnly DI annotation in a pure module fails`() {
+        writeBuild(KERNEL to "compileOnly(\"javax.inject:javax.inject:1\")")
 
         assertViolation("javax.inject:javax.inject on 'compileClasspath'")
     }
@@ -221,6 +254,11 @@ class ModuleBoundariesPluginTest {
         val result = run(expectFailure = true)
 
         assertTrue(result.output.contains("Module :feature has no role"), result.output)
+    }
+
+    private fun assertSuccess() {
+        val result = run(expectFailure = false)
+        assertTrue(result.output.contains("BUILD SUCCESSFUL"), result.output)
     }
 
     private fun assertViolation(expected: String) {
@@ -301,13 +339,27 @@ class ModuleBoundariesPluginTest {
     }
 
     private companion object {
+        const val KERNEL = ":shared:kernel"
+        const val TESTING = ":shared:testing"
+        const val LIVE_DOMAIN = ":features:live:domain"
+        const val LIVE_APPLICATION = ":features:live:application"
+        const val LIVE_A = ":features:live:a"
+        const val LIVE_B = ":features:live:b"
+        const val LIVE_UI = ":features:live:ui"
+        const val MODELS_DOMAIN = ":features:models:domain"
+        const val MODELS_APPLICATION = ":features:models:application"
+
         val MODULES =
             listOf(
-                ":core:domain",
-                ":core:application",
-                ":core:testing",
-                ":adapters:a",
-                ":adapters:b",
+                KERNEL,
+                TESTING,
+                LIVE_DOMAIN,
+                LIVE_APPLICATION,
+                LIVE_A,
+                LIVE_B,
+                LIVE_UI,
+                MODELS_DOMAIN,
+                MODELS_APPLICATION,
                 ":app",
                 ":architecture-tests",
             )

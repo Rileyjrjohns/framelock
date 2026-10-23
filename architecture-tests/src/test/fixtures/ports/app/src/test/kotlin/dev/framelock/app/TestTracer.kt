@@ -1,5 +1,5 @@
 package dev.framelock.app
 
-import dev.framelock.core.domain.port.Tracer
+import dev.framelock.live.domain.port.Tracer
 
 class TestTracer : Tracer

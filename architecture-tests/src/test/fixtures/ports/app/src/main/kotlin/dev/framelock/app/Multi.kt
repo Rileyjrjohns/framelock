@@ -1,6 +1,6 @@
 package dev.framelock.app
 
-import dev.framelock.core.domain.port.Clock
+import dev.framelock.live.domain.port.Clock
 
 val multi =
     object : Runnable, Clock {

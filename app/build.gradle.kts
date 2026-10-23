@@ -13,17 +13,21 @@ android {
 
 dependencies {
     // Composition root (AppGraph, manual DI): the only module that sees every other one.
-    implementation(projects.core.application)
-    implementation(projects.adapters.captureUvc)
-    implementation(projects.adapters.captureCamerax)
-    implementation(projects.adapters.inferenceLitert)
-    implementation(projects.adapters.modelStore)
-    implementation(projects.adapters.system)
-    implementation(projects.adapters.telemetry)
+    implementation(projects.features.live.application)
+    implementation(projects.features.live.captureUvc)
+    implementation(projects.features.live.captureCamerax)
+    implementation(projects.features.live.inferenceLitert)
+    implementation(projects.features.live.system)
+    implementation(projects.features.live.ui)
+    implementation(projects.features.models.application)
+    implementation(projects.features.models.store)
+    implementation(projects.features.models.ui)
+    implementation(projects.features.telemetry.application)
+    implementation(projects.features.telemetry.room)
 
     implementation(libs.androidx.core)
     implementation(libs.bundles.compose)
     debugImplementation(libs.bundles.compose.debug)
-    testImplementation(projects.core.testing)
+    testImplementation(projects.shared.testing)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }

@@ -23,9 +23,9 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        register("jvmCore") {
-            id = "framelock.jvm.core"
-            implementationClass = "dev.framelock.buildlogic.JvmCoreConventionPlugin"
+        register("jvmPure") {
+            id = "framelock.jvm.pure"
+            implementationClass = "dev.framelock.buildlogic.JvmPureConventionPlugin"
         }
         register("jvmArchitectureTests") {
             id = "framelock.jvm.architecture-tests"
@@ -34,6 +34,10 @@ gradlePlugin {
         register("androidAdapter") {
             id = "framelock.android.adapter"
             implementationClass = "dev.framelock.buildlogic.AndroidAdapterConventionPlugin"
+        }
+        register("androidUi") {
+            id = "framelock.android.ui"
+            implementationClass = "dev.framelock.buildlogic.AndroidUiConventionPlugin"
         }
         register("androidApplication") {
             id = "framelock.android.application"

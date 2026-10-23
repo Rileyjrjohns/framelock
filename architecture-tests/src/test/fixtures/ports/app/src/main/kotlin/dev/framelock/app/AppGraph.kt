@@ -1,8 +1,8 @@
 package dev.framelock.app
 
-import dev.framelock.core.domain.port.Clock as PortClock
-import dev.framelock.core.domain.port.DeviceInfoProvider
-import dev.framelock.core.domain.port.Tracer
+import dev.framelock.live.domain.port.Clock as PortClock
+import dev.framelock.live.domain.port.DeviceInfoProvider
+import dev.framelock.live.domain.port.Tracer
 
 object AppGraph {
     val tracer = object : Tracer {}

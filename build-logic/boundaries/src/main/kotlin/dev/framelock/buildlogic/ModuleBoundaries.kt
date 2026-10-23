@@ -48,7 +48,7 @@ class ModuleBoundariesPlugin : Plugin<Project> {
                 val root = incoming.resolutionResult.rootComponent
                 verify.configure { reached.addAll(root.map { reachedComponents(configuration.name, it) }) }
             }
-            if (role.isCore) {
+            if (role.isPure) {
                 // A jar added with files(...) has no component identity, so the classpath walk cannot see it.
                 verify.configure {
                     fileDependencies.addAll(
@@ -118,7 +118,7 @@ abstract class VerifyModuleBoundaries : DefaultTask() {
     @get:Input
     abstract val reached: ListProperty<String>
 
-    /** Configurations of a `:core:*` module that declare a `files(...)` dependency. */
+    /** Configurations of a pure module that declare a `files(...)` dependency. */
     @get:Input
     abstract val fileDependencies: ListProperty<String>
 
@@ -132,7 +132,7 @@ abstract class VerifyModuleBoundaries : DefaultTask() {
             val production = !ModuleRole.isTestClasspath(classpath)
             when (kind) {
                 "project" -> {
-                    if (target != path && ModuleRole.of(target) !in role.allowedOn(classpath)) {
+                    if (target != path && !role.mayReach(ModuleRole.of(target), classpath)) {
                         violations += "$role may not reach $target (${ModuleRole.of(target)}) on '$classpath'"
                     }
                 }
@@ -146,7 +146,7 @@ abstract class VerifyModuleBoundaries : DefaultTask() {
                     // camera2-pipe depends on Dagger at runtime). Konsist forbids any DI reference in our code.
                     if (production && kind == "direct-module" && ModuleRole.isDependencyInjection(target)) {
                         violations += "No DI framework or annotation library is allowed: $target on '$classpath'"
-                    } else if (role.isCore && production && !ModuleRole.isAllowedInCore(target)) {
+                    } else if (role.isPure && production && !ModuleRole.isAllowedInPure(target)) {
                         violations += "$role may only use kotlinx-coroutines-core, found $target on '$classpath'"
                     }
                 }

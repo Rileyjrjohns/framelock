@@ -1,20 +1,39 @@
 package dev.framelock.architecture
 
 /**
- * The architecture rules, as functions from source files to violations. [LayeringRulesTest] runs them on the
- * repository; [RuleFixturesTest] runs them on small fixture trees to prove each one can fail.
+ * The architecture rules that Gradle cannot check, as functions from source files to violations (ADR-006, ADR-014).
+ * Which module may see which is enforced by `verifyModuleBoundaries`: a class outside a module's reach is not on its
+ * classpath, so referencing it does not compile. These rules look at what a module does with what it can see.
+ *
+ * Each rule selects its own scope from all the files it is given: [LayeringRulesTest] runs them on the repository,
+ * [RuleFixturesTest] on fixture trees that break them, so a rule or its scope that stops matching fails its own test.
  */
 internal object Rules {
     const val ROOT_PACKAGE = "dev.framelock"
 
-    /** Ports live in this package (docs/architecture.md, "Ports"). */
-    const val PORT_PACKAGE = "$ROOT_PACKAGE.core.domain.port"
+    /** Every module, for the non-empty scope check. */
+    val MODULES =
+        listOf(
+            "shared/kernel",
+            "shared/testing",
+            "features/live/domain",
+            "features/live/application",
+            "features/live/capture-uvc",
+            "features/live/capture-camerax",
+            "features/live/inference-litert",
+            "features/live/system",
+            "features/live/ui",
+            "features/models/domain",
+            "features/models/application",
+            "features/models/store",
+            "features/models/ui",
+            "features/telemetry/domain",
+            "features/telemetry/application",
+            "features/telemetry/room",
+            "app",
+        )
 
-    val CORE_MODULES = listOf("core/domain", "core/application", "core/testing")
-    val ADAPTER_MODULES =
-        listOf("capture-uvc", "capture-camerax", "inference-litert", "model-store", "system", "telemetry")
-
-    /** Driven ports listed in docs/architecture.md. */
+    /** Ports named in docs/architecture.md: wherever they are declared, it must be in a port package. */
     val KNOWN_PORTS =
         listOf(
             "FrameSource",
@@ -29,86 +48,33 @@ internal object Rules {
             "AuditLog",
         )
 
+    /** `dev.framelock.kernel.port` or `dev.framelock.<feature>.domain.port` (ADR-014). */
+    private val PORT_PACKAGE = Regex("""^dev\.framelock\.(kernel|[a-z]+\.domain)\.port$""")
+
     val ANDROID_PREFIXES = listOf("android.", "androidx.", "com.google.android.")
     val DI_PREFIXES = listOf("javax.inject.", "jakarta.inject.", "dagger.", "org.koin.", "com.google.inject.")
 
-    private val KOTLIN = listOf("kotlin.", "kotlinx.coroutines.")
-
     /**
-     * Imports allowed in the main sources of each core module (ADR-006). Entries ending with a dot are package
-     * prefixes; others are exact class names. Extend only through a reviewed change of ADR-006.
+     * Imports allowed in pure modules besides Kotlin, kotlinx.coroutines and the project's own packages (ADR-006).
+     * Entries ending with a dot are package prefixes; others are exact class names. Widen only through ADR-006.
      */
-    val CORE_IMPORT_ALLOWLIST: Map<String, List<String>> =
+    val JDK_ALLOWLIST: Map<String, List<String>> =
         mapOf(
-            "core/domain" to KOTLIN +
-                listOf(
-                    "$ROOT_PACKAGE.core.domain.",
-                    "java.io.InputStream",
-                    "java.nio.ByteBuffer",
-                ),
-            "core/application" to KOTLIN + listOf("$ROOT_PACKAGE.core.domain.", "$ROOT_PACKAGE.core.application."),
-            "core/testing" to
-                KOTLIN +
-                listOf("$ROOT_PACKAGE.core.domain.", "$ROOT_PACKAGE.core.testing.", "java.util.concurrent."),
+            "features/live/domain" to listOf("java.nio.ByteBuffer"),
+            "features/models/domain" to listOf("java.io.InputStream"),
+            "shared/testing" to listOf("java.util.concurrent."),
         )
+    private val ALWAYS_ALLOWED = listOf("kotlin.", "kotlinx.coroutines.", "$ROOT_PACKAGE.")
 
-    private val ADAPTERS = ADAPTER_MODULES.map { "adapters/$it" }
-
-    private fun List<SourceFile>.production(vararg modules: String) =
-        filter { file -> file.isProduction && modules.any { file.isIn(it) } }
-
-    private fun List<SourceFile>.anySourceSet(vararg modules: String) = filter { file -> modules.any { file.isIn(it) } }
-
-    // Each rule below selects its own scope from all the files it is given, so the fixtures exercise the same
-    // scoping as the repository run.
-
-    fun coreReferencesToAndroid(files: List<SourceFile>): List<String> =
-        forbiddenReferences(files.production(*CORE_MODULES.toTypedArray()), ANDROID_PREFIXES)
+    fun pureReferencesToAndroid(files: List<SourceFile>): List<String> =
+        forbiddenReferences(files.filter { it.isPure && it.isProduction }, ANDROID_PREFIXES)
 
     fun referencesToDependencyInjection(files: List<SourceFile>): List<String> =
-        forbiddenReferences(files.anySourceSet(*(CORE_MODULES + ADAPTERS + "app").toTypedArray()), DI_PREFIXES)
+        forbiddenReferences(files.filter { it.module != null }, DI_PREFIXES)
 
-    fun coreImportsOutsideAllowlist(files: List<SourceFile>): List<String> =
-        CORE_IMPORT_ALLOWLIST.flatMap { (module, allowed) ->
-            importsOutsideAllowlist(files.production(module), allowed)
-        }
-
-    fun domainReferencesToApplication(files: List<SourceFile>): List<String> =
-        forbiddenReferences(files.production("core/domain"), listOf("$ROOT_PACKAGE.core.application."))
-
-    fun adapterReferencesToOtherAdapters(files: List<SourceFile>): List<String> =
-        ADAPTER_MODULES.flatMap { adapter ->
-            val others =
-                ADAPTER_MODULES.filter { it != adapter }.map {
-                    "$ROOT_PACKAGE.adapters.${it.replace(
-                        '-',
-                        '.',
-                    )}."
-                }
-            forbiddenReferences(files.anySourceSet("adapters/$adapter"), others)
-        }
-
-    fun adapterReferencesToApplication(files: List<SourceFile>): List<String> =
-        forbiddenReferences(files.production(*ADAPTERS.toTypedArray()), listOf("$ROOT_PACKAGE.core.application."))
-
-    /** ADR-002: the inference thread comes from the engine adapter, never from `limitedParallelism`. */
-    fun coreCallsToLimitedParallelism(files: List<SourceFile>): List<String> =
-        files.production(*CORE_MODULES.toTypedArray()).flatMap { file ->
-            val called = Regex("""\blimitedParallelism\s*\(""").containsMatchIn(file.code)
-            val imported = file.imports.any { it.name.endsWith(".limitedParallelism") }
-            if (called || imported) listOf("$file uses limitedParallelism") else emptyList()
-        }
-
-    private fun forbiddenReferences(
-        files: List<SourceFile>,
-        prefixes: List<String>,
-    ): List<String> = files.flatMap { file -> file.referencesTo(prefixes).map { "$file references $it" } }
-
-    private fun importsOutsideAllowlist(
-        files: List<SourceFile>,
-        allowed: List<String>,
-    ): List<String> =
-        files.flatMap { file ->
+    fun pureImportsOutsideAllowlist(files: List<SourceFile>): List<String> =
+        files.filter { it.isPure && it.isProduction }.flatMap { file ->
+            val allowed = ALWAYS_ALLOWED + JDK_ALLOWLIST[file.module].orEmpty()
             file.imports
                 .filterNot { import ->
                     allowed.any { entry ->
@@ -122,37 +88,40 @@ internal object Rules {
                 }.map { "$file imports ${it.name}${if (it.isWildcard) ".*" else ""}" }
         }
 
+    /** ADR-002: the inference thread comes from the engine adapter, never from `limitedParallelism`. */
+    fun pureCallsToLimitedParallelism(files: List<SourceFile>): List<String> =
+        files.filter { it.isPure && it.isProduction }.flatMap { file ->
+            val called = Regex("""\blimitedParallelism\s*\(""").containsMatchIn(file.code)
+            val imported = file.imports.any { it.name.endsWith(".limitedParallelism") }
+            if (called || imported) listOf("$file uses limitedParallelism") else emptyList()
+        }
+
     /**
-     * Ports are the non-sealed interfaces declared in [PORT_PACKAGE] (sealed ones, such as `SourceEvent`, are
-     * value types that travel through ports). They may be implemented only in adapters, in `:core:testing` and in
-     * test sources: not in the core, not in the app. Checks named, nested and local types (with indirect parents)
-     * and object expressions; ports may not be `fun interface`, so no SAM lambda can implement one.
+     * Ports are the non-sealed interfaces of a port package (sealed ones, such as `SourceEvent`, are values that
+     * travel through ports). They may be implemented only in adapters, in `:shared:testing` and in test sources: not
+     * in a domain, an application, a UI module or the app. Checks named, nested and local types (with indirect
+     * parents) and object expressions; ports may not be `fun interface`, so no SAM lambda can implement one.
      */
     fun portViolations(files: List<SourceFile>): List<String> {
         val index = TypeIndex(files)
         val ports =
             index.types
-                .filter { it.isInterface && !it.isSealed && it.fqn.startsWith("$PORT_PACKAGE.") }
+                .filter { it.isInterface && !it.isSealed && PORT_PACKAGE.matches(it.fqn.substringBeforeLast('.')) }
                 .map { it.fqn }
                 .toSet()
         val violations = mutableListOf<String>()
 
         index.types
-            .filter {
-                it.isInterface && it.simpleName in KNOWN_PORTS && it.file.isProduction &&
-                    it.file.isIn("core/domain")
-            }.filterNot { it.fqn.startsWith("$PORT_PACKAGE.") }
-            .forEach { violations += "Port ${it.fqn} must be declared in $PORT_PACKAGE (${it.file})" }
+            .filter { it.isInterface && it.simpleName in KNOWN_PORTS && it.file.isPure && it.file.isProduction }
+            .filterNot { PORT_PACKAGE.matches(it.fqn.substringBeforeLast('.')) }
+            .forEach { violations += "Port ${it.fqn} must be declared in a port package (${it.file})" }
 
         index.types
             .filter { it.fqn in ports && it.isFunInterface }
             .forEach { violations += "Port ${it.fqn} must not be a fun interface (${it.file})" }
 
         val restricted =
-            files.filter {
-                it.isProduction &&
-                    (it.isIn("core/domain") || it.isIn("core/application") || it.isIn("app"))
-            }
+            files.filter { it.isProduction && ((it.isPure && it.module != "shared/testing") || it.isUiOrApp) }
         index.types
             .filter { it.file in restricted && it.fqn !in ports }
             .forEach { type ->
@@ -169,6 +138,11 @@ internal object Rules {
         }
         return violations
     }
+
+    private fun forbiddenReferences(
+        files: List<SourceFile>,
+        prefixes: List<String>,
+    ): List<String> = files.flatMap { file -> file.referencesTo(prefixes).map { "$file references $it" } }
 
     /** `object : A, B(x), C<T> {`: the supertype list of an object expression, up to its body. */
     private val OBJECT_EXPRESSION = Regex("""\bobject\s*:([^{]+)\{""")

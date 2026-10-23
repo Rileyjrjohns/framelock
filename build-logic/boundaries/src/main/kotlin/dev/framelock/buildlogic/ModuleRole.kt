@@ -2,41 +2,72 @@ package dev.framelock.buildlogic
 
 import org.gradle.api.GradleException
 
+/** Hexagonal layer of a module (ADR-014). */
+enum class Layer { CONTAINER, KERNEL, TESTING, DOMAIN, APPLICATION, ADAPTER, UI, APP, ARCHITECTURE_TESTS }
+
 /**
- * Role of a module in the hexagonal layout, derived from its Gradle path.
- * The allowed dependencies of each role are the rules of docs/architecture.md ("Modules") and ADR-006.
+ * Role of a module, derived from its Gradle path: a layer and, for feature modules, a feature.
+ * The allowed dependencies are the rules of ADR-014 ("Layers depend inward", "Features depend on each other in one
+ * direction") and ADR-006.
  */
-enum class ModuleRole {
-    /** Implicit parent projects such as `:core` and `:adapters`: no sources, no dependencies. */
-    CONTAINER,
-    CORE_DOMAIN,
-    CORE_APPLICATION,
-    CORE_TESTING,
-    ADAPTER,
-    APP,
-    ARCHITECTURE_TESTS,
-    ;
+data class ModuleRole(
+    val layer: Layer,
+    val feature: String? = null,
+) {
+    /** Pure-Kotlin modules: no Android, no DI, kotlinx-coroutines-core only. */
+    val isPure: Boolean
+        get() = layer == Layer.KERNEL || layer == Layer.TESTING || layer == Layer.DOMAIN || layer == Layer.APPLICATION
 
-    val isCore: Boolean
-        get() = this == CORE_DOMAIN || this == CORE_APPLICATION || this == CORE_TESTING
-
-    /**
-     * Roles this module may reach, directly or transitively, on a classpath.
-     * Test classpaths may additionally reach `:core:testing`.
-     */
-    fun allowedOn(classpath: String): Set<ModuleRole> {
-        val production =
-            when (this) {
-                CONTAINER, CORE_DOMAIN, ARCHITECTURE_TESTS -> emptySet()
-                CORE_APPLICATION, CORE_TESTING, ADAPTER -> setOf(CORE_DOMAIN)
-                APP -> setOf(CORE_DOMAIN, CORE_APPLICATION, ADAPTER)
-            }
-        return if (isTestClasspath(classpath) && this != ARCHITECTURE_TESTS) production + CORE_TESTING else production
+    /** Whether this module may reach [target], directly or transitively, on [classpath]. */
+    fun mayReach(
+        target: ModuleRole,
+        classpath: String,
+    ): Boolean {
+        val onTest = isTestClasspath(classpath) && layer != Layer.ARCHITECTURE_TESTS
+        return reachableInProduction(target) || (onTest && TESTING.reachableInProduction(target)) ||
+            (onTest && target.layer == Layer.TESTING)
     }
 
-    companion object {
-        private const val ADAPTERS_PREFIX = ":adapters:"
+    private fun reachableInProduction(target: ModuleRole): Boolean {
+        val upstream = upstreamOf(feature)
+        val ownOrUpstream = target.feature == feature || target.feature in upstream
+        return when (layer) {
+            Layer.CONTAINER, Layer.KERNEL, Layer.ARCHITECTURE_TESTS -> {
+                false
+            }
 
+            Layer.TESTING -> {
+                target.layer == Layer.KERNEL || target.layer == Layer.DOMAIN
+            }
+
+            Layer.DOMAIN -> {
+                target.layer == Layer.KERNEL || (target.layer == Layer.DOMAIN && target.feature in upstream)
+            }
+
+            Layer.APPLICATION -> {
+                target.layer == Layer.KERNEL ||
+                    (target.layer == Layer.DOMAIN && ownOrUpstream) ||
+                    (target.layer == Layer.APPLICATION && target.feature in upstream)
+            }
+
+            Layer.ADAPTER -> {
+                target.layer == Layer.KERNEL || (target.layer == Layer.DOMAIN && ownOrUpstream)
+            }
+
+            Layer.UI -> {
+                target.layer == Layer.KERNEL ||
+                    ((target.layer == Layer.DOMAIN || target.layer == Layer.APPLICATION) && ownOrUpstream)
+            }
+
+            Layer.APP -> {
+                target.layer !in NOT_REACHABLE_FROM_APP
+            }
+        }
+    }
+
+    override fun toString(): String = if (feature == null) layer.name else "${layer.name}($feature)"
+
+    companion object {
         /**
          * Test classpaths, recognised by their exact shape: `testCompileClasspath`, `testRuntimeClasspath` (JVM) and
          * `<variant>UnitTest…Classpath` / `<variant>AndroidTest…Classpath` (AGP). Every other classpath, including
@@ -54,33 +85,76 @@ enum class ModuleRole {
         private val DI_GROUPS =
             setOf("com.google.dagger", "io.insert-koin", "javax.inject", "jakarta.inject", "com.google.inject")
 
-        fun of(path: String): ModuleRole =
-            when {
-                path == ":core" || path == ":adapters" -> CONTAINER
+        /** Features and the features each one may depend on, directly. The graph must stay acyclic. */
+        val FEATURE_UPSTREAM: Map<String, Set<String>> =
+            mapOf(
+                "live" to emptySet(),
+                "models" to setOf("live"),
+                "telemetry" to setOf("live", "models"),
+            )
 
-                path == ":core:domain" -> CORE_DOMAIN
+        private val TESTING = ModuleRole(Layer.TESTING)
+        private val NOT_REACHABLE_FROM_APP = setOf(Layer.CONTAINER, Layer.TESTING, Layer.APP, Layer.ARCHITECTURE_TESTS)
 
-                path == ":core:application" -> CORE_APPLICATION
+        fun of(path: String): ModuleRole {
+            val segments = path.removePrefix(":").split(':')
+            return when {
+                path == ":shared" || path == ":features" -> ModuleRole(Layer.CONTAINER)
 
-                path == ":core:testing" -> CORE_TESTING
+                path == ":shared:kernel" -> ModuleRole(Layer.KERNEL)
 
-                path.startsWith(ADAPTERS_PREFIX) && ':' !in path.removePrefix(ADAPTERS_PREFIX) -> ADAPTER
+                path == ":shared:testing" -> ModuleRole(Layer.TESTING)
 
-                path == ":app" -> APP
+                path == ":app" -> ModuleRole(Layer.APP)
 
-                path == ":architecture-tests" -> ARCHITECTURE_TESTS
+                path == ":architecture-tests" -> ModuleRole(Layer.ARCHITECTURE_TESTS)
+
+                segments[0] == "features" && segments.size in 2..3 -> featureRole(path, segments)
 
                 else -> throw GradleException(
                     "Module $path has no role. Add it to ModuleRole (build-logic) before using it.",
                 )
             }
+        }
+
+        private fun featureRole(
+            path: String,
+            segments: List<String>,
+        ): ModuleRole {
+            val feature = segments[1]
+            if (feature !in FEATURE_UPSTREAM) {
+                throw GradleException(
+                    "Module $path belongs to unknown feature '$feature'. Declare it in FEATURE_UPSTREAM.",
+                )
+            }
+            val layer =
+                when (segments.getOrNull(2)) {
+                    null -> Layer.CONTAINER
+                    "domain" -> Layer.DOMAIN
+                    "application" -> Layer.APPLICATION
+                    "ui" -> Layer.UI
+                    else -> Layer.ADAPTER
+                }
+            return ModuleRole(layer, feature)
+        }
+
+        /** Every feature [feature] depends on, directly or not. */
+        fun upstreamOf(feature: String?): Set<String> {
+            val result = mutableSetOf<String>()
+            val pending = ArrayDeque(FEATURE_UPSTREAM[feature].orEmpty())
+            while (pending.isNotEmpty()) {
+                val next = pending.removeFirst()
+                if (result.add(next)) pending += FEATURE_UPSTREAM[next].orEmpty()
+            }
+            return result
+        }
 
         fun isClasspath(configuration: String): Boolean = CLASSPATH.matches(configuration)
 
         fun isTestClasspath(configuration: String): Boolean = TEST_CLASSPATH.matches(configuration)
 
-        /** External libraries allowed on the production classpaths of `:core:*`: kotlinx-coroutines-core and Kotlin. */
-        fun isAllowedInCore(module: String): Boolean =
+        /** External libraries allowed on the production classpaths of pure modules: kotlinx-coroutines-core and Kotlin. */
+        fun isAllowedInPure(module: String): Boolean =
             module.startsWith("org.jetbrains.kotlin:kotlin-stdlib") ||
                 module.startsWith("org.jetbrains.kotlinx:kotlinx-coroutines-core") ||
                 module == "org.jetbrains.kotlinx:kotlinx-coroutines-bom" ||

@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test
  */
 class RuleFixturesTest {
     @Test
-    fun `android referenced by its qualified name in core is caught, not when in a comment`() {
-        val violations = Rules.coreReferencesToAndroid(Scopes.fixture("android-qualified-in-core"))
+    fun `android referenced by its qualified name in a pure module is caught, not when in a comment`() {
+        val violations = Rules.pureReferencesToAndroid(Scopes.fixture("android-qualified-in-pure-module"))
 
         assertEquals(listOf("android.os.Bundle"), violations.map { it.substringAfter(" references ") })
     }
@@ -30,51 +30,30 @@ class RuleFixturesTest {
 
     @Test
     fun `allowlisted class name does not allow classes sharing its prefix`() {
-        val violations = Rules.coreImportsOutsideAllowlist(Scopes.fixture("import-allowlist"))
+        val violations = Rules.pureImportsOutsideAllowlist(Scopes.fixture("import-allowlist"))
 
         assertEquals(listOf("java.io.InputStreamReader"), violations.map { it.substringAfter(" imports ") })
     }
 
     @Test
-    fun `limitedParallelism is caught in any core module, not in comments or strings`() {
-        val violations = Rules.coreCallsToLimitedParallelism(Scopes.fixture("limited-parallelism"))
+    fun `limitedParallelism is caught in any pure module, not in comments or strings`() {
+        val violations = Rules.pureCallsToLimitedParallelism(Scopes.fixture("limited-parallelism"))
 
         assertEquals(1, violations.size, violations.joinToString())
-        assertEquals(true, violations.single().contains("/core/domain/"), violations.single())
-    }
-
-    @Test
-    fun `layering references between domain, application and adapters are caught`() {
-        val files = Scopes.fixture("layering")
-
-        assertEquals(
-            1,
-            Rules.domainReferencesToApplication(files).size,
-            Rules.domainReferencesToApplication(files).joinToString(),
-        )
-        assertEquals(
-            1,
-            Rules.adapterReferencesToOtherAdapters(files).size,
-            Rules.adapterReferencesToOtherAdapters(files).joinToString(),
-        )
-        assertEquals(
-            1,
-            Rules.adapterReferencesToApplication(files).size,
-            Rules.adapterReferencesToApplication(files).joinToString(),
-        )
+        assertEquals(true, violations.single().contains("/features/live/domain/"), violations.single())
     }
 
     @Test
     fun `port implementations outside adapters are caught however they are written`() {
         val violations = Rules.portViolations(Scopes.fixture("ports"))
 
-        val port = "dev.framelock.core.domain.port"
+        val port = "dev.framelock.live.domain.port"
         assertEquals(
             setOf(
-                "Port dev.framelock.core.domain.FrameSource must be declared in $port",
+                "Port dev.framelock.live.domain.FrameSource must be declared in a port package",
                 "Port $port.TelemetrySink must not be a fun interface",
-                "dev.framelock.core.application.QualifiedThermal implements port $port.ThermalMonitor outside adapters",
-                "dev.framelock.core.application.StarMemory implements port $port.MemoryPressureMonitor outside adapters",
+                "dev.framelock.live.application.QualifiedThermal implements port $port.ThermalMonitor outside adapters",
+                "dev.framelock.live.application.StarMemory implements port $port.MemoryPressureMonitor outside adapters",
                 "Object expression implements port $port.Tracer outside adapters",
                 "Object expression implements port $port.Clock outside adapters",
                 "dev.framelock.app.AppDeviceInfo implements port $port.DeviceInfoProvider outside adapters",

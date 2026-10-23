@@ -29,6 +29,21 @@ internal class SourceFile(
             !sourceSet.startsWith("androidTest") &&
             !(sourceSet.startsWith("test") && !sourceSet.startsWith("testFixtures"))
 
+    /** Module directory, e.g. `features/live/domain`, `shared/kernel` or `app`; null outside any module. */
+    val module: String? =
+        MODULE
+            .findAll(path)
+            .lastOrNull()
+            ?.groupValues
+            ?.get(1)
+
+    /** The shared modules and every feature's `domain` and `application`: pure Kotlin (ADR-014). */
+    val isPure: Boolean =
+        module != null && (module.startsWith("shared/") || PURE_FEATURE_LAYER.matches(module))
+
+    /** A feature's Compose module, or the app: they may not implement ports. */
+    val isUiOrApp: Boolean = module == "app" || module?.endsWith("/ui") == true
+
     val code: String by lazy { stripCommentsAndStrings(declaration.text) }
 
     val packageName: String by lazy {
@@ -81,6 +96,8 @@ internal class SourceFile(
     companion object {
         /** The last `/src/<set>/kotlin/` (or `java`) segment: the repository may itself sit under a `src` directory. */
         private val SOURCE_SET = Regex("""/src/([^/]+)/(kotlin|java)/""")
+        private val MODULE = Regex("""/(shared/[a-z-]+|features/[a-z-]+/[a-z-]+|app)/src/[^/]+/(?:kotlin|java)/""")
+        private val PURE_FEATURE_LAYER = Regex("features/[a-z-]+/(domain|application)")
         private val PACKAGE = Regex("""(?m)^\s*package\s+([\w.]+)""")
         private val IMPORT = Regex("""(?m)^\s*import\s+([\w.]+?)(\.\*)?(\s+as\s+(\w+))?\s*$""")
         private val QUALIFIED_NAME = Regex("""(?<![\w.])[a-z]\w*(\.\w+)+""")

@@ -1,12 +1,10 @@
 package dev.framelock.architecture
 
-import dev.framelock.architecture.Rules.ADAPTER_MODULES
-import dev.framelock.architecture.Rules.CORE_MODULES
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 /**
- * Rules from docs/architecture.md ("Principles", "Modules"), ADR-002 and ADR-006, run on the repository.
+ * Rules from docs/architecture.md ("Principles"), ADR-002, ADR-006 and ADR-014, run on the repository.
  * Each rule picks its own scope (see [Rules]); [RuleFixturesTest] proves the same calls fail on broken fixtures.
  */
 class LayeringRulesTest {
@@ -14,12 +12,12 @@ class LayeringRulesTest {
 
     @Test
     fun `every module scope is non-empty`() {
-        (CORE_MODULES + ADAPTER_MODULES.map { "adapters/$it" } + "app").forEach { Scopes.production(it) }
+        Rules.MODULES.forEach { Scopes.production(it) }
     }
 
     @Test
-    fun `core does not reference android, androidx or com google android`() {
-        assertNoViolation(Rules.coreReferencesToAndroid(files))
+    fun `pure modules do not reference android, androidx or com google android`() {
+        assertNoViolation(Rules.pureReferencesToAndroid(files))
     }
 
     @Test
@@ -28,33 +26,18 @@ class LayeringRulesTest {
     }
 
     @Test
-    fun `core production imports only kotlin, kotlinx coroutines and the per-module allowlist`() {
-        assertNoViolation(Rules.coreImportsOutsideAllowlist(files))
+    fun `pure modules import only kotlin, kotlinx coroutines, the project and their JDK allowlist`() {
+        assertNoViolation(Rules.pureImportsOutsideAllowlist(files))
     }
 
     @Test
-    fun `domain does not reference application`() {
-        assertNoViolation(Rules.domainReferencesToApplication(files))
-    }
-
-    @Test
-    fun `adapters do not reference another adapter's package`() {
-        assertNoViolation(Rules.adapterReferencesToOtherAdapters(files))
-    }
-
-    @Test
-    fun `adapters do not reference core application`() {
-        assertNoViolation(Rules.adapterReferencesToApplication(files))
-    }
-
-    @Test
-    fun `ports are implemented only in adapters, core testing or test sources`() {
+    fun `ports are implemented only in adapters, shared testing or test sources`() {
         assertNoViolation(Rules.portViolations(files))
     }
 
     @Test
-    fun `core does not use limitedParallelism`() {
-        assertNoViolation(Rules.coreCallsToLimitedParallelism(files))
+    fun `pure modules do not use limitedParallelism`() {
+        assertNoViolation(Rules.pureCallsToLimitedParallelism(files))
     }
 
     private fun assertNoViolation(violations: List<String>) {
