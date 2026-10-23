@@ -21,21 +21,38 @@ Gradle tests are in `build-logic/boundaries` (`ModuleBoundariesPluginTest`), Kon
 
 ## Core (M1)
 
-| ID | Requirement | Status |
-|---|---|---|
-| DOM-1 | `FrameId` monotonic within a session | planned M1 |
-| DOM-2 | `SessionId` incremented on every (re)connection | planned M1 |
-| DOM-3 | Value object invariants (rectangles, scores, manifest, frame) | planned M1 |
-| DOM-4 | `ImageBuffer.close()` returns the buffer to its pool | planned M1 |
-| POL-1 | `ResultDisplayPolicy` | planned M1 |
-| POL-2 | `InferenceRatePolicy` | planned M1 |
-| POL-3 | `ReconnectPolicy` (backoff, cap, jitter) | planned M1 |
-| POL-4 | `ModelSwapPolicy` | planned M1 |
-| POL-5 | `TelemetryAllowlist` | planned M1 |
-| PIPE-1 … PIPE-7 | Pipeline rules 1–7 (core part; rule 7 for the inference section only) | planned M1 |
-| DISP-1 | A result is shown only with its own frame (ADR-001) | planned M1 |
-| MOD-1 … MOD-4 | Swap only when idle; load before switching; rollback; telemetry and audit | planned M1 |
-| TEL-1 … TEL-5 | Typed events; enum ids; 10 s windows; e2e on one clock; `PipelineWindow` fields | planned M1 |
+Tests are named by class; each class lists, in its test names, the cases it covers. Pipeline tests run on virtual
+time with the fakes of `:shared:testing`, except `InferencePipelineThreadingTest`, which uses a real thread.
+
+| ID | Requirement | Tests (module → class) | Status |
+|---|---|---|---|
+| DOM-1 | `FrameId` monotonic within a session | live:domain → `FrameIdTest` | covered |
+| DOM-2 | `SessionId` incremented on every (re)connection; a non-increasing one is refused | live:domain → `SessionIdTest`; live:application → `InferencePipelineConnectionTest` (new session adopts an incremented SessionId; Connected with a non-increasing SessionId is rejected and its frames dropped) | covered |
+| DOM-3 | Value object invariants (rectangles, scores, results, frames, manifests) | live:domain → `NormalizedRectTest`, `DetectionTest`, `FrameTest`; kernel → `ModelManifestTest` | covered |
+| DOM-4 | `ImageBuffer.close()` returns the buffer to its pool, exactly once | testing → `FakeImageBufferPoolTest`; live:application → `InferencePipelineBufferLifecycleTest` | covered |
+| POL-1 | `ResultDisplayPolicy` | live:domain → `ResultDisplayPolicyTest` | covered |
+| POL-2 | `InferenceRatePolicy` (ADR-013 table) | live:domain → `InferenceRatePolicyTest` | covered |
+| POL-3 | `ReconnectPolicy` (backoff, cap, jitter) | live:domain → `ReconnectPolicyTest` | covered |
+| POL-4 | `ModelSwapPolicy` | models:domain → `ModelSwapPolicyTest` | covered |
+| POL-5 | `TelemetryAllowlist` (known families only) | telemetry:domain → `TelemetryAllowlistTest`; telemetry:application → `TelemetryRecorderTest` | covered |
+| PIPE-1 | One inference at a time on the engine's own thread (ADR-002) | live:application → `InferencePipelineThreadingTest` | covered |
+| PIPE-2 | Latest frame wins; drops counted and released at once | live:application → `InferencePipelineConflationTest` | covered |
+| PIPE-3 | Late frames and frames of a previous session dropped | live:application → `InferencePipelineOrderingTest` | covered |
+| PIPE-4 | Disconnection: `NoSignal`, result cleared in the same emission, in-flight result discarded, reconnection by policy | live:application → `InferencePipelineConnectionTest` | covered |
+| PIPE-5 | Rate lowered or paused under pressure, the state says why; never crashes | live:application → `InferencePipelineDegradationTest` | covered |
+| PIPE-6a | Every buffer released in all paths (ADR-010) | live:application → `InferencePipelineBufferLifecycleTest` | covered |
+| PIPE-7 | `INFERENCE` trace section around each inference (ADR-009) | live:application → `InferencePipelineTracingTest` | covered |
+| DISP-1 | A result is shown only with its own frame (ADR-001) | live:application → `InferencePipelineDisplayInvariantTest`, `InferencePipelineConnectionTest` | covered |
+| MOD-1 | Swap only when idle or without signal | models:domain → `ModelSwapPolicyTest`; models:application → `ActivateModelTest`, `RollbackModelTest`, `ImportModelTest`; live:application → `InferencePipelineModelLoadingTest` | covered |
+| MOD-2 | Load and warm up before the pointer switches; previous model kept on failure | models:application → `ActivateModelTest`, `RollbackModelTest`; live:application → `InferencePipelineModelLoadingTest` | covered |
+| MOD-3 | Rollback to the previous version | models:application → `RollbackModelTest` | covered |
+| MOD-4 | Telemetry and audit on every import, activation, rejection and rollback | models:application → `ActivateModelTest`, `RollbackModelTest`, `ImportModelTest` | covered |
+| TEL-1 | Typed events only; unknown families rejected | telemetry:domain → `TelemetryAllowlistTest` | covered |
+| TEL-2 | `ScreenId` and `ElementId` are enums; tracking goes through the allowlist | telemetry:application → `TelemetryRecorderTest` | covered |
+| TEL-3 | 10 s windows, no per-frame event | live:application → `MetricsAggregatorTest`, `InferencePipelineMetricsTest` | covered |
+| TEL-4 | e2e latency = render − capture on the same clock (ADR-011) | live:application → `MetricsAggregatorTest`, `InferencePipelineMetricsTest`, `PipelineUseCasesTest` | covered |
+| TEL-5 | `PipelineWindow` fields (nearest-rank p50/p95, fps, drops) | live:application → `PercentilesTest`, `MetricsAggregatorTest` | covered |
+| UC-1 | Start/Stop/Observe use cases; device snapshot once per start | live:application → `PipelineUseCasesTest` | covered |
 
 ## Later milestones
 
@@ -43,7 +60,7 @@ Gradle tests are in `build-logic/boundaries` (`ModuleBoundariesPluginTest`), Kon
 |---|---|---|
 | LRT-1 | LiteRT golden test on a fixed image, with tolerance (instrumented) | planned M2 |
 | UI-T | `Modifier.track(ElementId)` routes clicks to `TrackUiInteraction` | planned M2 |
-| PIPE-7b | Trace sections for capture, preprocess, postprocess, render | planned M2/M3 |
+| PIPE-7b | Trace sections for capture, preprocess, postprocess, render (ADR-009 ownership) | planned M2/M3 |
 | UI-1 | "No signal" banner shown and overlay hidden on disconnect | planned M3 |
 | MS-1 … MS-3 | Bad signature rejected; atomic activation; rollback on disk | planned M5 |
 | TELA-1, TELA-2 | Telemetry buffer cap; batching | planned M6 |
