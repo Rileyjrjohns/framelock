@@ -101,7 +101,13 @@ internal object BoundedToken {
     private const val MAX_LENGTH = 64
     private val OUTSIDE = Regex("[^A-Za-z0-9._ -]")
 
-    fun of(raw: String?): String = raw.orEmpty().replace(OUTSIDE, "").trim().take(MAX_LENGTH).ifEmpty { "unknown" }
+    fun of(raw: String?): String =
+        raw
+            .orEmpty()
+            .replace(OUTSIDE, "")
+            .trim()
+            .take(MAX_LENGTH)
+            .ifEmpty { "unknown" }
 }
 
 internal object Battery {
