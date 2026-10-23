@@ -19,6 +19,8 @@ bin/
 *.jks
 *.keystore
 *.pem
+# Public keys are meant to be committed: the release key goes in app/src/main/assets/keys/ (README, "Models").
+!app/src/main/assets/keys/*.pub.pem
 *.p12
 *.key
 *.der
@@ -29,6 +31,8 @@ bin/
 signing.properties
 .env*
 keys/
+!app/src/main/assets/keys/
 
-# Model binaries are downloaded, not committed
+# Model binaries are downloaded and signed locally, not committed (app/src/debug/assets/{models,keys})
 *.tflite
+*.flmodel
