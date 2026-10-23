@@ -1,4 +1,4 @@
-package dev.framelock.app
+package dev.framelock.models.store
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -45,7 +45,7 @@ class EmbeddedLabelsTest {
 
     @Test
     fun `reads the labels of the development model when it has been fetched`() {
-        val model = File("src/debug/assets/models/efficientdet_lite0.tflite")
+        val model = File("../../live/inference-litert/src/androidTest/assets/efficientdet_lite0.tflite")
         assumeTrue(model.exists(), "run scripts/fetch-model.sh first")
 
         val read = EmbeddedLabels.read(model)

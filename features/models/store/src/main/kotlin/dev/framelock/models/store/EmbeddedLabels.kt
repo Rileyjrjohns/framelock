@@ -1,4 +1,4 @@
-package dev.framelock.app
+package dev.framelock.models.store
 
 import java.io.File
 import java.nio.ByteBuffer
