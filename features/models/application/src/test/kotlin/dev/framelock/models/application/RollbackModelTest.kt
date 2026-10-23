@@ -37,6 +37,13 @@ class RollbackModelTest {
 
             assertEquals(ModelChangeResult.Refused(ModelRejectionReason.SWAP_REFUSED), result)
             assertEquals(0, h.repository.rollbackCalls)
+            assertEquals(listOf(ModelTelemetry.ModelRejected(ModelRejectionReason.SWAP_REFUSED)), h.recorded)
+            assertEquals(
+                AuditOutcome.REJECTED,
+                h.audit.entries
+                    .last()
+                    .outcome,
+            )
         }
 
     @Test
@@ -79,6 +86,13 @@ class RollbackModelTest {
                 RollbackModel(FakeModelLoading(single), single, fresh.audit, { fresh.recorded += it }, fresh.clock)
 
             assertEquals(ModelChangeResult.Refused(ModelRejectionReason.NO_PREVIOUS_VERSION), rollback())
+            assertEquals(listOf(ModelTelemetry.ModelRejected(ModelRejectionReason.NO_PREVIOUS_VERSION)), fresh.recorded)
+            assertEquals(
+                AuditOutcome.REJECTED,
+                fresh.audit.entries
+                    .single()
+                    .outcome,
+            )
         }
 
     @Test

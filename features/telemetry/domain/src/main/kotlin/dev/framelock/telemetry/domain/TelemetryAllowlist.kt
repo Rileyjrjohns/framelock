@@ -66,7 +66,9 @@ object TelemetryAllowlist {
 
     private fun modelVerdict(event: ModelTelemetry): AllowlistVerdict =
         when (event) {
-            is ModelTelemetry.ModelSwapped, is ModelTelemetry.ModelRejected -> AllowlistVerdict.Accepted
+            is ModelTelemetry.ModelSwapped, is ModelTelemetry.ModelImported, is ModelTelemetry.ModelRejected -> {
+                AllowlistVerdict.Accepted
+            }
         }
 
     private fun windowVerdict(window: LiveTelemetry.PipelineWindow): AllowlistVerdict {

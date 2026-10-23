@@ -31,6 +31,8 @@ class ImportModelTest {
             val result = h.import(source)
 
             assertTrue(result is ImportResult.Imported, "$result")
+            val version = (result as ImportResult.Imported).manifest.version
+            assertEquals(listOf(ModelTelemetry.ModelImported(version)), h.recorded)
             val entry = h.audit.entries.single()
             assertEquals(AuditAction.IMPORT, entry.action)
             assertEquals(AuditOutcome.SUCCEEDED, entry.outcome)
@@ -79,5 +81,12 @@ class ImportModelTest {
 
             assertEquals(ImportResult.Refused(ModelRejectionReason.SWAP_REFUSED), result)
             assertEquals(0, h.repository.importCalls)
+            assertEquals(listOf(ModelTelemetry.ModelRejected(ModelRejectionReason.SWAP_REFUSED)), h.recorded)
+            assertEquals(
+                AuditOutcome.REJECTED,
+                h.audit.entries
+                    .single()
+                    .outcome,
+            )
         }
 }

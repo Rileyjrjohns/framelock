@@ -31,7 +31,7 @@ class TelemetryRecorder(
         try {
             sink.record(event)
         } catch (
-            @Suppress("TooGenericExceptionCaught", "SwallowedException") e: RuntimeException,
+            @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
         ) {
             synchronized(lock) { failed++ }
         }

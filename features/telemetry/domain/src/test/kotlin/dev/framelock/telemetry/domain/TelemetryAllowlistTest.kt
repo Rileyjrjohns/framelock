@@ -56,42 +56,12 @@ class TelemetryAllowlistTest {
                 validWindow,
                 validSnapshot,
                 ModelTelemetry.ModelSwapped(from = null, to = ModelVersion("v2")),
+                ModelTelemetry.ModelImported(ModelVersion("v3")),
                 ModelTelemetry.ModelRejected(ModelRejectionReason.BAD_SIGNATURE),
                 LiveTelemetry.PipelineDegraded(DegradationCause.THERMAL),
             )
 
-        val names =
-            oneOfEach.map { event ->
-                // No `else` inside a family: a new event stops this test from compiling until it is covered here.
-                when (event) {
-                    is UsageTelemetry -> {
-                        when (event) {
-                            UsageTelemetry.AppSession -> "AppSession"
-                            is UsageTelemetry.ScreenViewed -> "ScreenViewed"
-                            is UsageTelemetry.UiInteraction -> "UiInteraction"
-                        }
-                    }
-
-                    is LiveTelemetry -> {
-                        when (event) {
-                            is LiveTelemetry.PipelineWindow -> "PipelineWindow"
-                            is LiveTelemetry.DeviceSnapshotRecorded -> "DeviceSnapshotRecorded"
-                            is LiveTelemetry.PipelineDegraded -> "PipelineDegraded"
-                        }
-                    }
-
-                    is ModelTelemetry -> {
-                        when (event) {
-                            is ModelTelemetry.ModelSwapped -> "ModelSwapped"
-                            is ModelTelemetry.ModelRejected -> "ModelRejected"
-                        }
-                    }
-
-                    else -> {
-                        error("unknown family: $event")
-                    }
-                }
-            }
+        val names = oneOfEach.map(::nameOf)
 
         assertEquals(oneOfEach.size, names.toSet().size, "each subtype is listed once")
         oneOfEach.forEach { assertEquals(accepted, TelemetryAllowlist.verdict(it), "$it") }
@@ -229,4 +199,34 @@ class TelemetryAllowlistTest {
     }
 
     private fun rejected(reason: AllowlistRejection) = AllowlistVerdict.Rejected(reason)
+
+    // No `else` inside a family: a new event stops this test from compiling until it is covered here.
+    private fun nameOf(event: TelemetryEvent): String =
+        when (event) {
+            is UsageTelemetry -> usageName(event)
+            is LiveTelemetry -> liveName(event)
+            is ModelTelemetry -> modelName(event)
+            else -> error("unknown family: $event")
+        }
+
+    private fun usageName(event: UsageTelemetry): String =
+        when (event) {
+            UsageTelemetry.AppSession -> "AppSession"
+            is UsageTelemetry.ScreenViewed -> "ScreenViewed"
+            is UsageTelemetry.UiInteraction -> "UiInteraction"
+        }
+
+    private fun liveName(event: LiveTelemetry): String =
+        when (event) {
+            is LiveTelemetry.PipelineWindow -> "PipelineWindow"
+            is LiveTelemetry.DeviceSnapshotRecorded -> "DeviceSnapshotRecorded"
+            is LiveTelemetry.PipelineDegraded -> "PipelineDegraded"
+        }
+
+    private fun modelName(event: ModelTelemetry): String =
+        when (event) {
+            is ModelTelemetry.ModelSwapped -> "ModelSwapped"
+            is ModelTelemetry.ModelImported -> "ModelImported"
+            is ModelTelemetry.ModelRejected -> "ModelRejected"
+        }
 }

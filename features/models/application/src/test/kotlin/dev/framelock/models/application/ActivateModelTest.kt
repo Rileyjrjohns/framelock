@@ -82,6 +82,13 @@ class ActivateModelTest {
             assertEquals(ModelChangeResult.Refused(ModelRejectionReason.UNKNOWN_VERSION), result)
             assertEquals(emptyList<Any>(), h.pipeline.loads)
             assertEquals(h.m1, h.repository.active())
+            assertEquals(listOf(ModelTelemetry.ModelRejected(ModelRejectionReason.UNKNOWN_VERSION)), h.recorded)
+            assertEquals(
+                AuditOutcome.REJECTED,
+                h.audit.entries
+                    .single()
+                    .outcome,
+            )
         }
 
     @Test
@@ -112,6 +119,36 @@ class ActivateModelTest {
             assertEquals(ModelChangeResult.Refused(ModelRejectionReason.IO_ERROR), result)
             assertEquals(listOf(h.m2.manifest.version, h.m1.manifest.version), h.pipeline.loads.map { it.first })
             assertEquals(h.m1.manifest.version, h.pipeline.state.value.model)
+        }
+
+    @Test
+    fun `activating the active model changes nothing`() =
+        runTest {
+            val result = h.activate(h.m1.manifest.version)
+
+            assertEquals(ModelChangeResult.Unchanged(h.m1.manifest.version), result)
+            assertEquals(emptyList<Any>(), h.pipeline.loads)
+            assertEquals(emptyList<Any>(), h.recorded)
+            assertEquals(emptyList<Any>(), h.audit.entries)
+        }
+
+    @Test
+    fun `a failed restore after a failed commit is reported too`() =
+        runTest {
+            h.repository.failNext(Operation.ACTIVATE, java.io.IOException("disk full"))
+            h.pipeline.failRestore = true
+
+            val result = h.activate(h.m2.manifest.version)
+
+            assertEquals(ModelChangeResult.Refused(ModelRejectionReason.IO_ERROR), result)
+            assertEquals(
+                listOf(
+                    ModelTelemetry.ModelRejected(ModelRejectionReason.IO_ERROR),
+                    ModelTelemetry.ModelRejected(ModelRejectionReason.LOAD_FAILED),
+                ),
+                h.recorded,
+            )
+            assertEquals(listOf(AuditOutcome.FAILED, AuditOutcome.FAILED), h.audit.entries.map { it.outcome })
         }
 
     @Test

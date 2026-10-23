@@ -11,6 +11,10 @@ sealed interface ModelTelemetry : TelemetryEvent {
         val to: ModelVersion,
     ) : ModelTelemetry
 
+    data class ModelImported(
+        val version: ModelVersion,
+    ) : ModelTelemetry
+
     data class ModelRejected(
         val reason: ModelRejectionReason,
     ) : ModelTelemetry

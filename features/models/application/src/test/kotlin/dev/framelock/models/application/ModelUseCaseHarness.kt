@@ -5,7 +5,7 @@ import dev.framelock.kernel.model.ModelVersion
 import dev.framelock.kernel.telemetry.TelemetryEvent
 import dev.framelock.live.application.pipeline.ModelLoading
 import dev.framelock.live.application.pipeline.PipelineUiState
-import dev.framelock.live.application.pipeline.SessionActiveException
+import dev.framelock.live.application.pipeline.SwapOutcome
 import dev.framelock.live.domain.frame.DisconnectReason
 import dev.framelock.live.domain.pipeline.DegradationCause
 import dev.framelock.live.domain.pipeline.InferenceRate
@@ -17,7 +17,10 @@ import dev.framelock.testing.ManualClock
 import dev.framelock.testing.TestModels
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/** The pipeline as the models feature sees it: a state, and model loads that can be scripted to fail. */
+/**
+ * The pipeline as the models feature sees it: a state, and an atomic swap following the [ModelLoading] contract,
+ * whose loads can be scripted to fail. `RealPipelineSwapTest` checks the same scenarios on the real pipeline.
+ */
 internal class FakeModelLoading(
     private val repository: FakeModelRepository,
 ) : ModelLoading {
@@ -28,15 +31,40 @@ internal class FakeModelLoading(
     var sessionStartedMeanwhile = false
     private val failures = ArrayDeque<Exception>()
 
+    /** When a commit fails, loading the previous model back fails too. */
+    var failRestore = false
+
     fun failNextLoad() = failures.addLast(IllegalStateException("load failed"))
 
     fun setState(next: PipelineState) {
         state.value = state.value.copy(state = next)
     }
 
-    override suspend fun loadModel(model: ModelArtifact) {
-        if (sessionStartedMeanwhile) throw SessionActiveException()
-        failures.removeFirstOrNull()?.let { throw it }
+    override suspend fun swapModel(
+        target: ModelArtifact,
+        restore: ModelArtifact?,
+        commit: suspend () -> Result<Unit>,
+    ): SwapOutcome {
+        val loadFailure = failures.removeFirstOrNull()
+        return when {
+            sessionStartedMeanwhile -> SwapOutcome.SessionActive
+            loadFailure != null -> SwapOutcome.LoadFailed(loadFailure)
+            else -> commitAfterLoading(target, restore, commit)
+        }
+    }
+
+    private suspend fun commitAfterLoading(
+        target: ModelArtifact,
+        restore: ModelArtifact?,
+        commit: suspend () -> Result<Unit>,
+    ): SwapOutcome {
+        load(target)
+        val failure = commit().exceptionOrNull()
+        val restored = failure != null && restore != null && !failRestore && load(restore) == Unit
+        return if (failure == null) SwapOutcome.Swapped else SwapOutcome.CommitFailed(failure, restored)
+    }
+
+    private fun load(model: ModelArtifact) {
         loads += model.manifest.version to repository.active()?.manifest?.version
         state.value = state.value.copy(model = model.manifest.version)
     }

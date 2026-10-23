@@ -6,7 +6,7 @@ import dev.framelock.kernel.model.ModelVersion
 import dev.framelock.kernel.port.Clock
 import dev.framelock.kernel.telemetry.TelemetryEvent
 import dev.framelock.live.application.pipeline.ModelLoading
-import dev.framelock.live.application.pipeline.SessionActiveException
+import dev.framelock.live.application.pipeline.SwapOutcome
 import dev.framelock.models.domain.AuditAction
 import dev.framelock.models.domain.AuditEntry
 import dev.framelock.models.domain.AuditOutcome
@@ -18,9 +18,13 @@ import dev.framelock.models.domain.policy.SwapDecision
 import dev.framelock.models.domain.port.AuditLog
 import dev.framelock.models.domain.port.ModelRepository
 import dev.framelock.models.domain.telemetry.ModelTelemetry
-import kotlinx.coroutines.CancellationException
 
 sealed interface ModelChangeResult {
+    /** The requested model is already the active one: nothing was done. */
+    data class Unchanged(
+        val version: ModelVersion,
+    ) : ModelChangeResult
+
     data class Changed(
         val from: ModelVersion?,
         val to: ModelVersion,
@@ -53,10 +57,12 @@ class ActivateModel(
 
     suspend operator fun invoke(version: ModelVersion): ModelChangeResult {
         val target = repository.artifact(version)
+        val current = repository.active()
         return when {
             !switch.allowed() -> switch.refuse(AuditAction.ACTIVATE, version, ModelRejectionReason.SWAP_REFUSED)
             target == null -> switch.refuse(AuditAction.ACTIVATE, version, ModelRejectionReason.UNKNOWN_VERSION)
-            else -> switch.switchTo(AuditAction.ACTIVATE, target, repository.active()) { repository.activate(version) }
+            current?.manifest == target.manifest -> ModelChangeResult.Unchanged(version)
+            else -> switch.switchTo(AuditAction.ACTIVATE, target, current) { repository.activate(version) }
         }
     }
 }
@@ -113,6 +119,7 @@ class ImportModel(
         }
         return repository.import(source).fold(
             onSuccess = { manifest ->
+                switch.record(ModelTelemetry.ModelImported(manifest.version))
                 switch.audit(AuditAction.IMPORT, manifest.version, AuditOutcome.SUCCEEDED, reason = null)
                 ImportResult.Imported(manifest)
             },
@@ -122,13 +129,14 @@ class ImportModel(
 }
 
 /**
- * The sequence shared by activation and rollback: the engine loads the target first; only then does the repository
- * move its pointer. If the repository fails, the previous model is loaded back, so engine and repository agree.
+ * What activation and rollback share. The pipeline swaps atomically (ADR-003): it loads the target, lets the repository
+ * move its pointer, and loads the previous model back if that fails, all under its lifecycle lock. This class turns
+ * each outcome into a result, an audit entry and a telemetry event.
  */
 internal class ModelSwitch(
     private val pipeline: ModelLoading,
     private val auditLog: AuditLog,
-    private val record: (TelemetryEvent) -> Unit,
+    val record: (TelemetryEvent) -> Unit,
     private val clock: Clock,
 ) {
     fun allowed(): Boolean = ModelSwapPolicy.decide(pipeline.state.value.state) == SwapDecision.Allowed
@@ -140,22 +148,26 @@ internal class ModelSwitch(
         commit: suspend () -> Result<Unit>,
     ): ModelChangeResult {
         val version = target.manifest.version
-        val loadFailure = load(target)
-        val commitFailure = if (loadFailure == null) commit().exceptionOrNull() else null
-        return when {
-            loadFailure != null -> {
-                reject(action, version, loadFailure)
-            }
-
-            commitFailure != null -> {
-                previous?.let { load(it) }
-                reject(action, version, commitFailure)
-            }
-
-            else -> {
+        return when (val outcome = pipeline.swapModel(target, previous, commit)) {
+            SwapOutcome.Swapped -> {
                 record(ModelTelemetry.ModelSwapped(previous?.manifest?.version, version))
                 audit(action, version, AuditOutcome.SUCCEEDED, reason = null)
                 ModelChangeResult.Changed(previous?.manifest?.version, version)
+            }
+
+            SwapOutcome.SessionActive -> {
+                refuse(action, version, ModelRejectionReason.SWAP_REFUSED)
+            }
+
+            is SwapOutcome.LoadFailed -> {
+                fail(action, version, ModelRejectionReason.LOAD_FAILED)
+            }
+
+            is SwapOutcome.CommitFailed -> {
+                val result = reject(action, version, outcome.cause)
+                // The engine still holds the target while the repository kept the previous one: say so.
+                if (!outcome.restored) fail(action, previous?.manifest?.version, ModelRejectionReason.LOAD_FAILED)
+                result
             }
         }
     }
@@ -164,26 +176,32 @@ internal class ModelSwitch(
         action: AuditAction,
         version: ModelVersion?,
         reason: ModelRejectionReason,
-    ): ModelChangeResult.Refused {
-        record(ModelTelemetry.ModelRejected(reason))
-        audit(action, version, AuditOutcome.REJECTED, reason)
-        return ModelChangeResult.Refused(reason)
-    }
+    ): ModelChangeResult.Refused = conclude(action, version, AuditOutcome.REJECTED, reason)
 
-    /** A typed rejection is REJECTED with its reason; anything else is a FAILED I/O error (or load failure). */
+    /** A typed rejection keeps its reason and is REJECTED; anything else is a FAILED I/O error. */
     fun reject(
         action: AuditAction,
         version: ModelVersion?,
         error: Throwable,
+    ): ModelChangeResult.Refused =
+        if (error is ModelRejectedException) {
+            conclude(action, version, AuditOutcome.REJECTED, error.reason)
+        } else {
+            fail(action, version, ModelRejectionReason.IO_ERROR)
+        }
+
+    private fun fail(
+        action: AuditAction,
+        version: ModelVersion?,
+        reason: ModelRejectionReason,
+    ): ModelChangeResult.Refused = conclude(action, version, AuditOutcome.FAILED, reason)
+
+    private fun conclude(
+        action: AuditAction,
+        version: ModelVersion?,
+        outcome: AuditOutcome,
+        reason: ModelRejectionReason,
     ): ModelChangeResult.Refused {
-        val reason =
-            when (error) {
-                is SessionActiveException -> return refuse(action, version, ModelRejectionReason.SWAP_REFUSED)
-                is ModelRejectedException -> error.reason
-                is LoadFailure -> ModelRejectionReason.LOAD_FAILED
-                else -> ModelRejectionReason.IO_ERROR
-            }
-        val outcome = if (error is ModelRejectedException) AuditOutcome.REJECTED else AuditOutcome.FAILED
         record(ModelTelemetry.ModelRejected(reason))
         audit(action, version, outcome, reason)
         return ModelChangeResult.Refused(reason)
@@ -195,23 +213,4 @@ internal class ModelSwitch(
         outcome: AuditOutcome,
         reason: ModelRejectionReason?,
     ) = auditLog.record(AuditEntry(action, version, outcome, reason, clock.nowNanos()))
-
-    /** Null when loaded; otherwise why not. The engine may fail in any way: it is reported, never thrown. */
-    private suspend fun load(model: ModelArtifact): Throwable? =
-        try {
-            pipeline.loadModel(model)
-            null
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: SessionActiveException) {
-            e
-        } catch (
-            @Suppress("TooGenericExceptionCaught") e: Exception,
-        ) {
-            LoadFailure(e)
-        }
-
-    private class LoadFailure(
-        cause: Throwable,
-    ) : Exception(cause)
 }
