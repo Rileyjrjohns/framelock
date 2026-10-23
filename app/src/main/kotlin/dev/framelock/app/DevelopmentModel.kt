@@ -1,6 +1,7 @@
 package dev.framelock.app
 
 import android.content.Context
+import android.util.Log
 import dev.framelock.kernel.model.ModelArtifact
 import dev.framelock.kernel.model.ModelManifest
 import dev.framelock.kernel.model.ModelVersion
@@ -9,7 +10,6 @@ import dev.framelock.kernel.model.TensorSpec
 import dev.framelock.live.domain.inference.LabelId
 import java.io.File
 import java.security.MessageDigest
-import java.util.zip.ZipFile
 
 /**
  * The model used until the model store of M5: the public EfficientDet-Lite0 with its post-processing op
@@ -35,20 +35,12 @@ internal class DevelopmentModel(
         val target = File(context.filesDir, "models/${VERSION.value}/model.tflite")
         target.parentFile?.mkdirs()
         asset.use { input -> target.outputStream().use { input.copyTo(it) } }
-        labels = runCatching { embeddedLabels(target) }.getOrDefault(emptyList())
+        labels =
+            runCatching { EmbeddedLabels.read(target) }
+                .onFailure { Log.w(TAG, "Labels unreadable; the overlay shows class numbers", it) }
+                .getOrDefault(emptyList())
         installed = ModelArtifact(manifest(sha256(target)), target.absolutePath)
     }
-
-    /** TFLite metadata embeds the label file as a zip entry; its name depends on the publisher. */
-    private fun embeddedLabels(model: File): List<String> =
-        ZipFile(model).use { zip ->
-            val entry = zip.entries().asSequence().firstOrNull { it.name.endsWith(".txt") } ?: return emptyList()
-            zip
-                .getInputStream(entry)
-                .bufferedReader()
-                .readLines()
-                .filter { it.isNotBlank() }
-        }
 
     private fun manifest(sha256: String) =
         ModelManifest(
@@ -79,6 +71,7 @@ internal class DevelopmentModel(
     }
 
     private companion object {
+        const val TAG = "DevelopmentModel"
         val VERSION = ModelVersion("efficientdet-lite0-int8")
         const val ASSET = "models/efficientdet_lite0.tflite"
         const val INPUT_SIZE = 320
