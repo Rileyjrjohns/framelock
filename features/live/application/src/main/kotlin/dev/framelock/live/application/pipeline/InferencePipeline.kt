@@ -102,6 +102,7 @@ class InferencePipeline(
     private var sessionJob: Job? = null
     private var sessionScope: CoroutineScope? = null
     private var reconnectJob: Job? = null
+    private var disconnectedWhileReconnecting = false
     private var wakeUp = Channel<Unit>(Channel.CONFLATED)
     private var running = false
     private var connected = false
@@ -334,7 +335,11 @@ class InferencePipeline(
     /** One reconnection loop at a time; its backoff keeps growing until frames flow again. */
     private fun scheduleReconnect() =
         synchronized(lock) {
-            if (reconnectJob?.isActive == true) return@synchronized
+            if (reconnectJob?.isActive == true) {
+                // Raised while the loop is opening: the loop must not take its open() for a success.
+                disconnectedWhileReconnecting = true
+                return@synchronized
+            }
             val target = sessionScope ?: return@synchronized
             reconnectJob = target.launch { reconnect() }
         }
@@ -345,9 +350,24 @@ class InferencePipeline(
             delay(reconnectPolicy.delayFor(attemptNumber))
             // Reconnected meanwhile (the source recovered by itself): nothing to do. An open() in progress is never
             // cancelled by a Connected event.
-            if (synchronized(lock) { connected || !running }) return
-            if (attempt { source.open() } != null) return
+            val stop =
+                synchronized(lock) {
+                    disconnectedWhileReconnecting = false
+                    (connected || !running).also { if (it) leaveReconnect() }
+                }
+            if (stop) return
+            val opened = attempt { source.open() } != null
+            if (opened && synchronized(lock) { !disconnectedWhileReconnecting && leaveReconnect() }) return
         }
+    }
+
+    /**
+     * Called under [lock] when the loop decides to end: it unregisters itself at once, so a disconnection raised
+     * before the coroutine completes starts a new loop instead of being taken for one raised during this loop's open.
+     */
+    private fun leaveReconnect(): Boolean {
+        reconnectJob = null
+        return true
     }
 
     /** Follows a monitor; if it fails, the last known level stays in force and the monitor is subscribed again. */

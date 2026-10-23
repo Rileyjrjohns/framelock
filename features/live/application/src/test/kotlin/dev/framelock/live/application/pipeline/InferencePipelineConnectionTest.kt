@@ -5,6 +5,7 @@ import dev.framelock.live.domain.frame.SessionId
 import dev.framelock.live.domain.pipeline.PipelineState
 import dev.framelock.testing.FakeImageBuffer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -53,6 +54,55 @@ class InferencePipelineConnectionTest {
             runCurrent()
 
             assertEquals(PipelineState.NoSignal(DisconnectReason.STREAM_ERROR), h.current.state)
+        }
+
+    @Test
+    fun `SIGNAL_LOST gives NoSignal`() =
+        runTest {
+            val h = PipelineHarness(this)
+            h.startConnected()
+            h.emit(h.frame(0))
+            runCurrent()
+
+            h.source.disconnect(DisconnectReason.SIGNAL_LOST)
+            runCurrent()
+
+            assertEquals(PipelineState.NoSignal(DisconnectReason.SIGNAL_LOST), h.current.state)
+            assertNull(h.current.annotated)
+        }
+
+    @Test
+    fun `SIGNAL_LOST is retried like a detached device`() =
+        runTest {
+            val h = PipelineHarness(this)
+            h.startConnected()
+            val opens = h.source.openCalls
+
+            h.source.disconnect(DisconnectReason.SIGNAL_LOST)
+            runCurrent()
+            advanceTimeBy(100)
+            runCurrent()
+
+            assertEquals(opens + 1, h.source.openCalls)
+        }
+
+    @Test
+    fun `a Disconnected raised while a reconnection is opening is retried`() =
+        runTest {
+            val h = PipelineHarness(this)
+            h.startConnected()
+            h.source.onOpen = {
+                h.source.disconnect(DisconnectReason.DEVICE_DETACHED)
+                delay(10)
+            }
+            h.source.disconnect(DisconnectReason.DEVICE_DETACHED)
+            runCurrent()
+            val opens = h.source.openCalls
+
+            advanceTimeBy(1_000)
+            runCurrent()
+
+            assertEquals(opens + 3, h.source.openCalls)
         }
 
     @Test
