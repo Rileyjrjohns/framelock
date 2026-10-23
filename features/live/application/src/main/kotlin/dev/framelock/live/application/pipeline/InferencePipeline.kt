@@ -77,9 +77,9 @@ class InferencePipeline(
     private val reconnectPolicy: ReconnectPolicy,
     private val scope: CoroutineScope,
     private val metricsTickNanos: Long = METRICS_TICK_NANOS,
-) {
+) : ModelLoading {
     private val mutableState = MutableStateFlow(PipelineUiState.INITIAL)
-    val state: StateFlow<PipelineUiState> = mutableState.asStateFlow()
+    override val state: StateFlow<PipelineUiState> = mutableState.asStateFlow()
 
     /** The frame on screen; the renderer reads its pixels here. */
     val display = DisplaySlot()
@@ -148,10 +148,9 @@ class InferencePipeline(
         }
     }
 
-    /** Loads [model] on the engine's thread. Only between sessions: the use cases check ModelSwapPolicy first. */
-    suspend fun loadModel(model: ModelArtifact) =
+    override suspend fun loadModel(model: ModelArtifact) =
         engineLock.withLock {
-            check(!synchronized(lock) { running }) { "A model can only be loaded between sessions" }
+            if (synchronized(lock) { running }) throw SessionActiveException()
             loadLocked(model)
         }
 
