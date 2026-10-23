@@ -114,3 +114,15 @@ internal class PooledYuvBuffer(
         const val CHROMA_DIVISOR = 4
     }
 }
+
+/**
+ * The pool to use for images of [width] x [height]: [current] when it already has that size, else a new one. The
+ * replaced pool is simply dropped: buffers still in flight keep a reference to it and return to it on close, then
+ * everything is garbage collected together.
+ */
+internal fun poolFor(
+    current: YuvFramePool?,
+    width: Int,
+    height: Int,
+    capacity: Int,
+): YuvFramePool = current?.takeIf { it.width == width && it.height == height } ?: YuvFramePool(width, height, capacity)

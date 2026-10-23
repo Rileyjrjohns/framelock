@@ -68,6 +68,30 @@ class YuvFramePoolTest {
         assertEquals(2, pool.available)
     }
 
+    @Test
+    fun `the same size keeps the pool and a new size swaps it`() {
+        val pool = YuvFramePool(width = 4, height = 2, capacity = 1)
+
+        assertSame(pool, poolFor(pool, 4, 2, 1))
+        val rotated = poolFor(pool, 2, 4, 1)
+        assertNotSame(pool, rotated)
+        assertEquals(2, rotated.width)
+        assertEquals(4, rotated.height)
+        assertEquals(4, poolFor(null, 4, 2, 4).available)
+    }
+
+    @Test
+    fun `a buffer of a replaced pool is released to that pool and the new pool is unaffected`() {
+        val old = YuvFramePool(width = 2, height = 2, capacity = 1)
+        val inFlight = copyTiny(old)!!
+        val replacement = poolFor(old, 4, 2, 1)
+
+        inFlight.close()
+
+        assertEquals(1, old.available)
+        assertEquals(1, replacement.available)
+    }
+
     private fun copyTiny(pool: YuvFramePool) =
         pool.copy(
             SourcePlane(plane(ByteArray(4)), rowStride = 2, pixelStride = 1),
