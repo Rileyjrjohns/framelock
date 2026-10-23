@@ -16,7 +16,7 @@ Gradle tests are in `build-logic/boundaries` (`ModuleBoundariesPluginTest`), Kon
 | ARCH-4 | Manual DI: no Hilt, no Koin, no DI annotations anywhere | Konsist: no module references a DI framework or DI annotations; fixture: DI imports and qualified DI annotations are caught in an adapter. Gradle: DI library in an adapter fails; DI library brought transitively is refused in core; DI library brought transitively by a third-party library is allowed outside core | covered |
 | ARCH-5 | Architecture rules never pass on an empty scope | Konsist: every module scope is non-empty; each fixture test | covered |
 | PIPE-1a | No `limitedParallelism` in the core (ADR-002) | Konsist: core does not use limitedParallelism; fixture: limitedParallelism is caught in any core module, not in comments or strings | covered |
-| CI-1 | Build, unit tests, ktlint, detekt, Konsist on push to `main` and on pull requests | `.github/workflows/ci.yml` | planned (first run on first push) |
+| CI-1 | Build, unit tests, ktlint, detekt, Konsist on push to `main` and on pull requests | `.github/workflows/ci.yml` (first green run: GitHub Actions run 39921498870) | covered |
 
 ## Core (M1)
 
