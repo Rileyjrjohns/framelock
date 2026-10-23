@@ -62,6 +62,8 @@ time with the fakes of `:shared:testing`, except `InferencePipelineThreadingTest
 | LRT-1 | LiteRT golden test on a fixed image, with tolerance (instrumented) | inference-litert → `LiteRtGoldenTest` (needs a device and `scripts/fetch-model.sh`; golden recorded on first run) | written, not yet run |
 | UI-T | `Modifier.track(ElementId)` routes clicks to `TrackUiInteraction` | live:ui → `Tracking.kt`, wired in `AppGraph`; no automated test yet | implemented, untested |
 | PIPE-7b | Trace sections for capture, preprocess, postprocess (ADR-009 ownership) | capture-camerax, inference-litert (visible in Perfetto; no automated test); render section planned M7 | implemented, untested |
+| LBL-1 | Overlay names come from the labels embedded in the model, whatever the zip offset convention | app → `EmbeddedLabelsTest` (both conventions, stored and deflated entries, the fetched model when present) | covered |
+| CAP-1 | Camera frames delivered upright and following display rotation, without a new session | capture-camerax → `YuvFramePoolTest` (pool swapped only on a size change, buffers of a replaced pool released to it); rotation checked on device (2026-10-23) | covered (rotation manual) |
 | UI-1 | "No signal" banner shown and overlay hidden on disconnect | planned M3 |
 | MS-1 … MS-3 | Bad signature rejected; atomic activation; rollback on disk | planned M5 |
 | TELA-1, TELA-2 | Telemetry buffer cap; batching | planned M6 |
