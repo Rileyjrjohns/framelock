@@ -83,9 +83,9 @@ Pure mappings are tested on the JVM (`ThermalHeadroomTest`, `MemoryPressureSigna
 | SYS-4 | Trim levels to pressure (RUNNING_* only), hold and decay of a trim signal (30 s) | system → `MemoryPressureSignalsTest` | covered |
 | SYS-5 | `MemoryInfo` to pressure, threshold factors and release margin | system → `MemoryPressureSignalsTest`; thresholds on a device: not yet run | covered (device not yet run) |
 | SYS-6 | Callbacks registered while collected and unregistered on cancel; polling every 2 s (`AndroidMemoryPressureMonitor`) | none automated | implemented, untested |
-| SYS-7 | Degradation wired end to end: `AppGraph` passes the real monitors; banner shows Degraded or Paused with the cause | live:application → `InferencePipelineDegradationTest` (ADR-013 table, causes, resume); device checks with the shell commands in the README: not yet run | covered (device not yet run) |
+| SYS-7 | Degradation wired end to end: `AppGraph` passes the real monitors; banner shows Degraded or Paused with the cause | live:application → `InferencePipelineDegradationTest` (ADR-013 table, causes, resume); checked on device (2026-10-23, Android 16): thermal override 3 → Degraded: thermal, 5 → Paused: thermal, reset → Running; `RUNNING_CRITICAL` → Paused: memory, back to Running after 30 s | covered |
 | SYS-8 | Device snapshot once per start with the fields of architecture.md | live:application → `PipelineUseCasesTest`; system → `SystemMappingTest` (bounded tokens, battery) | covered |
-| SYS-9 | Debug HUD shows thermal level and memory pressure | `LiveScreen` HUD line (`hud_system`) fed by `AppGraph`; no UI test | implemented, untested |
+| SYS-9 | Debug HUD shows thermal level and memory pressure | `LiveScreen` HUD line (`hud_system`) fed by `AppGraph`; no UI test; seen on device (2026-10-23) | implemented, checked manually |
 
 ## Later milestones
 
@@ -97,7 +97,7 @@ Pure mappings are tested on the JVM (`ThermalHeadroomTest`, `MemoryPressureSigna
 | LBL-1 | Overlay names come from the labels embedded in the model, whatever the zip offset convention | app → `EmbeddedLabelsTest` (both conventions, stored and deflated entries, the fetched model when present) | covered |
 | CAP-1 | Camera frames delivered upright and following display rotation, without a new session | capture-camerax → `YuvFramePoolTest` (pool swapped only on a size change, buffers of a replaced pool released to it); rotation checked on device (2026-10-23) | covered (rotation manual) |
 | UI-1 | "No signal" banner shown and overlay hidden on disconnect | live:ui → `LiveScreen` shows the `NoSignal` banner (`state_no_signal`) and the overlay comes from `PipelineUiState.annotated`, which `NoSignal` clears (live:application → `InferencePipelineConnectionTest`); no UI test yet | implemented, untested |
-| UI-2 | The video source can be chosen (Auto, back, front, external, each UVC device) while stopped; an explicit choice overrides Auto and applies at the next start; the HUD shows the active source and UVC mode | app → `SelectingFrameSourceTest` (explicit choice, Auto order unchanged, applies after close, description), `SourceSelectionTest` (option listing, id mapping, selection); capture-uvc → `UvcDeviceNamingTest` (labels, ids, HUD text); picker UI and device listing not yet checked on device | covered (UI and listing not yet checked) |
+| UI-2 | The video source can be chosen (Auto, back, front, external, each UVC device) while stopped; an explicit choice overrides Auto and applies at the next start; the HUD shows the active source and UVC mode | app → `SelectingFrameSourceTest` (explicit choice, Auto order unchanged, applies after close, description), `SourceSelectionTest` (option listing, id mapping, selection); capture-uvc → `UvcDeviceNamingTest` (labels, ids, HUD text); picker menu seen on device listing Auto, back and front cameras (2026-10-23); a UVC entry not yet seen | covered (UVC entry not yet seen) |
 | MS-1 … MS-3 | Bad signature rejected; atomic activation; rollback on disk | planned M5 |
 | TELA-1, TELA-2 | Telemetry buffer cap; batching | planned M6 |
 | PIPE-6b, PERF-1 | No per-frame allocation (measured); performance results | planned M7 |

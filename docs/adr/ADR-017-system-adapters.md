@@ -95,7 +95,8 @@ They change rarely and nothing is built per frame.
   device snapshot), CPU or GPU frequencies.
 - Memory: the Java heap, native heap, PSS, per-process `lastTrimLevel` (`ActivityManager.getMyMemoryState`), and the
   memory used by the capture card driver.
-- Unverified on a device: whether the shell can still inject RUNNING levels on API 34+ (see the README), the real
+- Checked on Android 16 (2026-10-23): the shell still injects `RUNNING_CRITICAL`, which paused the pipeline for the
+  30 s hold, then it resumed. Unverified on a device: the real
   `threshold` values on the test devices, and how soon `getThermalHeadroom` answers after start.
 
 ## Consequences

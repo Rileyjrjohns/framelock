@@ -62,12 +62,11 @@ adb shell am send-trim-memory dev.framelock RUNNING_LOW        # banner: Degrade
 adb shell am send-trim-memory dev.framelock RUNNING_CRITICAL   # banner: Paused: memory, for 30 s
 ```
 
-(`dev.framelock` is the application id). The command accepts `HIDDEN`, `RUNNING_MODERATE`, `BACKGROUND`, `RUNNING_LOW`, `MODERATE`,
-`RUNNING_CRITICAL`, `COMPLETE` or a raw integer; the level must be higher than the
-current one (so the second call may be refused until the process is restarted) and a background level is refused on a
-foreground process. The source suggests that on Android 14+ the shell still hands the level to the app, although the
-system no longer sends the `RUNNING_*` levels itself; this is not checked on a device. If nothing happens there, rely
-on the real signal instead: fill memory with another app and watch `Memory` in the HUD.
+(`dev.framelock` is the application id). The command accepts `HIDDEN`, `RUNNING_MODERATE`, `BACKGROUND`,
+`RUNNING_LOW`, `MODERATE`, `RUNNING_CRITICAL`, `COMPLETE` or a raw integer; the level must be higher than the current
+one (so the second call may be refused until the process is restarted) and a background level is refused on a
+foreground process. On Android 14+ the shell still hands the level to the app (checked on Android 16), although the
+system no longer sends the `RUNNING_*` levels itself.
 
 ## Build and test
 
