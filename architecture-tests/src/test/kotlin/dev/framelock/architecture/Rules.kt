@@ -26,6 +26,7 @@ internal object Rules {
             "TelemetrySink",
             "Clock",
             "Tracer",
+            "AuditLog",
         )
 
     val ANDROID_PREFIXES = listOf("android.", "androidx.", "com.google.android.")
@@ -39,7 +40,12 @@ internal object Rules {
      */
     val CORE_IMPORT_ALLOWLIST: Map<String, List<String>> =
         mapOf(
-            "core/domain" to KOTLIN + listOf("$ROOT_PACKAGE.core.domain.", "java.io.InputStream"),
+            "core/domain" to KOTLIN +
+                listOf(
+                    "$ROOT_PACKAGE.core.domain.",
+                    "java.io.InputStream",
+                    "java.nio.ByteBuffer",
+                ),
             "core/application" to KOTLIN + listOf("$ROOT_PACKAGE.core.domain.", "$ROOT_PACKAGE.core.application."),
             "core/testing" to
                 KOTLIN +

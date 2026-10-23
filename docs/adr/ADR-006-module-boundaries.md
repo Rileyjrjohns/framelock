@@ -55,7 +55,7 @@ the code (comments and strings removed).
 
   | Module | Allowed imports |
   |---|---|
-  | `:core:domain` | `kotlin.`, `kotlinx.coroutines.`, `dev.framelock.core.domain.`, `java.io.InputStream` (model import source) |
+  | `:core:domain` | `kotlin.`, `kotlinx.coroutines.`, `dev.framelock.core.domain.`, `java.io.InputStream` (model import source), `java.nio.ByteBuffer` (pixel planes) |
   | `:core:application` | `kotlin.`, `kotlinx.coroutines.`, `dev.framelock.core.domain.`, `dev.framelock.core.application.` |
   | `:core:testing` | `kotlin.`, `kotlinx.coroutines.`, `dev.framelock.core.domain.`, `dev.framelock.core.testing.`, `java.util.concurrent.` (thread-safe fakes) |
 
