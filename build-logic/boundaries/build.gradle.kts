@@ -19,6 +19,10 @@ java {
 val functionalTest: SourceSet = sourceSets.create("functionalTest")
 
 dependencies {
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
     "functionalTestImplementation"(platform(libs.junit.bom))
     "functionalTestImplementation"(libs.junit.jupiter)
     "functionalTestImplementation"(gradleTestKit())
@@ -43,5 +47,7 @@ val functionalTestTask =
         classpath = functionalTest.runtimeClasspath
         useJUnitPlatform()
     }
+
+tasks.test { useJUnitPlatform() }
 
 tasks.check { dependsOn(functionalTestTask) }
