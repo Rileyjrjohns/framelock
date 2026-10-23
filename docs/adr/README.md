@@ -20,6 +20,7 @@ One file per decision: context, decision, consequences. A decision changes only 
 | [014](ADR-014-feature-first-modules.md) | Feature-first modules, one module per layer | Accepted |
 | [015](ADR-015-first-real-loop.md) | First real loop (M2) choices | Accepted |
 | [016](ADR-016-uvc-capture.md) | UVC capture (M3) choices | Accepted |
+| [017](ADR-017-system-adapters.md) | System adapters (M4): thermal headroom and memory pressure | Accepted |
 
 Amended in M1: ADR-003 (model and audit ports, swap lock), ADR-004 (telemetry string fields, events, windows).
 

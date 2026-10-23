@@ -70,6 +70,23 @@ The UVC source itself needs a device and a capture card; its decisions are testa
 | DOM-5 | Session ids from one thread-safe sequence shared by all sources | live:domain → `SessionIdTest` | covered |
 | PIPE-4b | `SIGNAL_LOST` gives `NoSignal` and is retried like `DEVICE_DETACHED`; a `Disconnected` raised while a reconnection is opening is retried | live:application → `InferencePipelineConnectionTest` | covered |
 
+## System adapters (M4)
+
+Pure mappings are tested on the JVM (`ThermalHeadroomTest`, `MemoryPressureSignalsTest`, `SystemMappingTest` in
+`:features:live:system`); the platform calls around them need a device. Thresholds and sources: ADR-017.
+
+| ID | Requirement | Tests | Status |
+|---|---|---|---|
+| SYS-1 | Thermal level is the worse of the status listener and the forecast headroom (API 30+); API 29 uses the listener only | system → `ThermalHeadroomTest` (worse of two levels); `SystemMappingTest` (status mapping); the combination in `PowerManagerThermalMonitor` is not unit tested | covered (combination untested) |
+| SYS-2 | Headroom to level: documented thresholds, never above SEVERE, release margin against flapping, NaN ignored | system → `ThermalHeadroomTest` | covered |
+| SYS-3 | Headroom polled every 2 s only while collected; NaN or a failing call keeps the level | system → `ThermalHeadroomTest` (virtual time) | covered |
+| SYS-4 | Trim levels to pressure (RUNNING_* only), hold and decay of a trim signal (30 s) | system → `MemoryPressureSignalsTest` | covered |
+| SYS-5 | `MemoryInfo` to pressure, threshold factors and release margin | system → `MemoryPressureSignalsTest`; thresholds on a device: not yet run | covered (device not yet run) |
+| SYS-6 | Callbacks registered while collected and unregistered on cancel; polling every 2 s (`AndroidMemoryPressureMonitor`) | none automated | implemented, untested |
+| SYS-7 | Degradation wired end to end: `AppGraph` passes the real monitors; banner shows Degraded or Paused with the cause | live:application → `InferencePipelineDegradationTest` (ADR-013 table, causes, resume); device checks with the shell commands in the README: not yet run | covered (device not yet run) |
+| SYS-8 | Device snapshot once per start with the fields of architecture.md | live:application → `PipelineUseCasesTest`; system → `SystemMappingTest` (bounded tokens, battery) | covered |
+| SYS-9 | Debug HUD shows thermal level and memory pressure | `LiveScreen` HUD line (`hud_system`) fed by `AppGraph`; no UI test | implemented, untested |
+
 ## Later milestones
 
 | ID | Requirement | Status |

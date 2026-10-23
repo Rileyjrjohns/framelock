@@ -4,7 +4,9 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 (HDMI → USB) or from the device camera; a detection model runs on each analysed frame, and the result is
 drawn on the exact frame it was computed from.
 
-> Status: **M3, capture card.** The source is chosen when a session starts: a camera exposed as external by Android, else an attached USB video class device (capture card, through UVCAndroid), else the back camera. LiteRT inference (GPU delegate, CPU fallback) and the live screen with its synchronized overlay and debug HUD as in M2.
+> Status: **M4, system adapters.** Thermal (status listener plus forecast headroom on Android 11+) and memory pressure (trim callbacks plus `ActivityManager.MemoryInfo` polling) now drive the degradation of ADR-013 ([ADR-017](docs/adr/ADR-017-system-adapters.md)); the HUD shows both.
+>
+> Before that, **M3, capture card.** The source is chosen when a session starts: a camera exposed as external by Android, else an attached USB video class device (capture card, through UVCAndroid), else the back camera. LiteRT inference (GPU delegate, CPU fallback) and the live screen with its synchronized overlay and debug HUD as in M2.
 
 ## Requirements
 
@@ -32,6 +34,40 @@ signal* and the app retries. The chosen capture mode (format, size, rate) is log
 A phone usually has a single USB-C port, which the card takes, so `adb` over USB is not available. Use wireless
 debugging instead: *Developer options → Wireless debugging → Pair device with pairing code*, then
 `adb pair <host:port>` and `adb connect <host:port>`; `./gradlew installDebug` and `adb logcat` work over that link.
+
+### Degradation (debug)
+
+With a session running and **Debug HUD** on (it shows `Thermal: … · memory: …`), force a thermal status; the banner
+follows the ADR-013 table:
+
+```bash
+adb shell cmd thermalservice override-status 3   # 0 none, 1 light, 2 moderate, 3 severe, 4 critical, 5 emergency, 6 shutdown
+adb shell cmd thermalservice reset               # unlock the real status
+```
+
+| Status | Banner |
+|---|---|
+| 0 none, 1 light | Running |
+| 2 moderate | Degraded: thermal, 15 fps |
+| 3 severe | Degraded: thermal, 10 fps |
+| 4 critical | Degraded: thermal, 5 fps |
+| 5 emergency, 6 shutdown | Paused: thermal |
+
+`override-status` and `reset` are in the `thermalservice` help of the platform source. The override replaces the
+status that the listener reports; the forecast headroom is not overridden, so at the same time a hot device can show
+a worse level than the one forced. Memory:
+
+```bash
+adb shell am send-trim-memory dev.framelock RUNNING_LOW        # banner: Degraded: memory, 15 fps, for 30 s
+adb shell am send-trim-memory dev.framelock RUNNING_CRITICAL   # banner: Paused: memory, for 30 s
+```
+
+(`dev.framelock` is the application id). The command accepts `HIDDEN`, `RUNNING_MODERATE`, `BACKGROUND`, `RUNNING_LOW`, `MODERATE`,
+`RUNNING_CRITICAL`, `COMPLETE` or a raw integer; the level must be higher than the
+current one (so the second call may be refused until the process is restarted) and a background level is refused on a
+foreground process. The source suggests that on Android 14+ the shell still hands the level to the app, although the
+system no longer sends the `RUNNING_*` levels itself; this is not checked on a device. If nothing happens there, rely
+on the real signal instead: fill memory with another app and watch `Memory` in the HUD.
 
 ## Build and test
 

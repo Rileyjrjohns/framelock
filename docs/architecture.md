@@ -60,7 +60,7 @@ flowchart LR
 :features:live:capture-uvc      FrameSource over a USB/UVC capture card (UVCAndroid, ADR-016)
 :features:live:capture-camerax  FrameSource over CameraX (fallback, works without hardware)
 :features:live:inference-litert InferenceEngine over LiteRT (GPU delegate, CPU/XNNPACK fallback)
-:features:live:system           ThermalMonitor, MemoryPressureMonitor, DeviceInfoProvider, Clock, Tracer
+:features:live:system           ThermalMonitor (status + headroom), MemoryPressureMonitor (trim + MemoryInfo), DeviceInfoProvider, Clock, Tracer (ADR-017)
 :features:live:ui               live screen with synchronized overlay, debug HUD
 :features:models:domain         pure Kotlin — ModelSource, ModelSwapPolicy, ports ModelRepository and AuditLog, ModelTelemetry
 :features:models:application    pure Kotlin — ImportModel, ActivateModel, RollbackModel
@@ -203,7 +203,7 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
 - Live screen: video with overlay, plus a large status banner (Running / No signal / Degraded: thermal / Model vX).
 - Built for a two-second glance and imprecise touch: touch targets ≥ 64 dp, WCAG AA contrast at least, no critical action behind a small tap, no gesture-only actions.
 - Source picker (button in the controls row, enabled only while stopped; a change applies at the next start): Auto, back, front, external camera, each attached UVC device.
-- Debug HUD (toggle): active source and, for UVC, capture mode; input fps, inference fps, inference ms, e2e ms, thermal level, dropped frames.
+- Debug HUD (toggle): active source and, for UVC, capture mode; input fps, inference fps, inference ms, e2e ms, thermal level, memory pressure, dropped frames.
 - Models screen: list, activate, rollback, disabled whenever `ModelSwapPolicy` says no.
 - Bitmaps reused (double buffer): no allocation per frame.
 - `Modifier.track(ElementId)` routes clicks to `TrackUiInteraction`.
@@ -256,6 +256,7 @@ Each requirement links to its tests in `docs/traceability.md`.
 - ADR-012: scope of "no per-frame allocation"
 - ADR-013: inference rate and degradation table
 - ADR-016: UVC capture, source selection and shared session ids
+- ADR-017: system adapters: thermal headroom forecast and memory pressure signals
 
 ## Out of scope
 
