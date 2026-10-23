@@ -26,6 +26,8 @@ dependencies {
     implementation(projects.features.telemetry.room)
 
     implementation(libs.androidx.core)
+    implementation(platform(libs.kotlinx.coroutines.bom))
+    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.bundles.compose)
     debugImplementation(libs.bundles.compose.debug)
     testImplementation(projects.shared.testing)

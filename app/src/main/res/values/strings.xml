@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Framelock</string>
+    <string name="camera_permission_needed">The camera is needed to analyse the video feed.</string>
+    <string name="camera_permission_grant">Allow camera</string>
 </resources>
