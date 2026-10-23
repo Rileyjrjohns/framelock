@@ -27,6 +27,23 @@ every milestone. Licences are read from each artifact's POM.
 | `org.jspecify:jspecify` | 1.0.0 | Apache-2.0 |
 | `com.google.guava:listenablefuture` | 1.0 | Apache-2.0 |
 
+
+### Added in M2 (shipped)
+
+| Component | Version | Purpose | Licence |
+|---|---|---|---|
+| CameraX (core, camera2, lifecycle) | 1.6.2 | Fallback video source | Apache-2.0; `camera-camera2-pipe` brings Dagger 2.59 (Apache-2.0) at runtime, used internally by CameraX |
+| AndroidX Lifecycle runtime | 2.11.0 | Lifecycle owned by the CameraX source (CameraX declares 2.3.x) | Apache-2.0 |
+| LiteRT (`litert`, `litert-gpu`, with `litert-api`, `litert-gpu-api`) | 1.4.2 | On-device inference, GPU delegate | Apache-2.0 |
+| AndroidX Tracing | 2.0.5 | Trace sections for Perfetto | Apache-2.0 |
+| kotlinx-coroutines-android | 1.11.0 | Main dispatcher | Apache-2.0 |
+
+### Model (downloaded, not committed)
+
+| Component | Version | Source | Licence |
+|---|---|---|---|
+| EfficientDet-Lite0 int8, with embedded COCO labels | MediaPipe object detector v1, SHA-256 `0720bf24…23bb` | `scripts/fetch-model.sh` (storage.googleapis.com/mediapipe-models) | Apache-2.0 (per the model's publisher; to confirm against its model card before any distribution); trained on COCO 2017 (annotations CC BY 4.0, images under Flickr terms) |
+
 ## Tests only
 
 | Component | Version | Purpose | Licence |
@@ -60,11 +77,7 @@ Recorded with their milestone so licences are reviewed before code depends on th
 
 | Component | Version | Milestone | Licence |
 |---|---|---|---|
-| CameraX (core, camera2, lifecycle) | 1.6.2 | M2 | Apache-2.0; `camera-camera2-pipe` brings Dagger 2.59 (Apache-2.0) at runtime, used internally by CameraX |
-| LiteRT (`litert`, `litert-gpu`) | 1.4.2 | M2 | Apache-2.0 |
-| EfficientDet-Lite0 detection model | Kaggle v1 | M2 | Apache-2.0; trained on COCO 2017 (annotations CC BY 4.0, images under Flickr terms) |
 | UVCAndroid (`com.herohan:UVCAndroid`) | 1.0.13 | M3 | Apache-2.0; bundles libusb (LGPL-2.1), libuvc (BSD), libjpeg-turbo and libyuv (BSD); transitive hutool-core (Mulan PSL v2) |
-| AndroidX Tracing (direct; 1.2.0 already ships transitively) | 2.0.5 | M4 | Apache-2.0 |
 | kotlinx-serialization-json | 1.12.0 | M5/M6 | Apache-2.0 |
 | Room | 2.8.5 | M6 | Apache-2.0 |
 | WorkManager | 2.12.0 | M6 | Apache-2.0 |

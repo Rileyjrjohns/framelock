@@ -4,7 +4,7 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 (HDMI → USB) or from the device camera; a detection model runs on each analysed frame, and the result is
 drawn on the exact frame it was computed from.
 
-> Status: **M1, core with fakes.** Domain, pipeline, metrics and use cases are implemented and tested on the JVM; no screen and no real adapter yet (M2 onwards).
+> Status: **M2, first real loop.** CameraX source, LiteRT inference (GPU delegate, CPU fallback) and the live screen with its synchronized overlay and debug HUD. Capture card in M3.
 
 ## Requirements
 
@@ -12,12 +12,26 @@ drawn on the exact frame it was computed from.
 - Android SDK with platform 37 (Android Gradle Plugin downloads it on first build if licences are accepted)
 - An Android 10+ device (minSdk 29). For the capture card path: USB-C with OTG and an HDMI → USB UVC dongle.
 
+## Run
+
+```bash
+./scripts/fetch-model.sh                 # downloads the public detection model (checked by SHA-256)
+./gradlew installDebug                   # on a connected Android 10+ device
+```
+
+Open the app, allow the camera, tap **Start**. The status banner says what the pipeline does; **Debug HUD** shows
+input and inference fps, inference and end-to-end latency, and dropped frames. In M2 the source is the device camera;
+the capture card arrives in M3.
+
 ## Build and test
 
 ```bash
-./gradlew check          # unit tests, architecture rules, module boundaries, ktlint, detekt, Lint
-./gradlew assembleDebug  # app/build/outputs/apk/debug/
+./gradlew check                          # unit tests, architecture rules, module boundaries, ktlint, detekt, Lint
+./gradlew assembleDebug                  # app/build/outputs/apk/debug/
+./gradlew connectedDebugAndroidTest      # instrumented tests, including the LiteRT golden test (device needed)
 ```
+
+End-to-end latency is render time minus capture time; it does not include compositor and display latency.
 
 ## Layout
 
