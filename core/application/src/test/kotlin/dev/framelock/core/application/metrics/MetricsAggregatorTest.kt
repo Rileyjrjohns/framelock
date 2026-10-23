@@ -365,6 +365,17 @@ class MetricsAggregatorTest {
     }
 
     @Test
+    fun `live drop counts are current even when no time passed since the last tick`() {
+        aggregator.onFrameReceived()
+        aggregator.onFrameDropped(DropReason.CONFLATED)
+
+        aggregator.tick()
+
+        assertEquals(1L, aggregator.live.value.droppedFrames)
+        assertEquals(mapOf(DropReason.CONFLATED to 1L), aggregator.live.value.dropsByReason)
+    }
+
+    @Test
     fun `live metrics are empty until the first tick`() {
         repeat(5) { aggregator.onFrameReceived() }
         aggregator.onFrameDropped(DropReason.CONFLATED)

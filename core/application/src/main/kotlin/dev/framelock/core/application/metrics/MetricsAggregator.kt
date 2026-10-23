@@ -184,14 +184,15 @@ class MetricsAggregator(
         )
 
     /** The HUD values for the interval ending at [now], or null when no time went by since the last tick. */
-    private fun liveSnapshot(now: Long): LiveMetrics? {
+    private fun liveSnapshot(now: Long): LiveMetrics {
         val seconds = (now - tickStartNanos) / NANOS_PER_SECOND
-        if (seconds <= 0.0) return null
-
+        val previous = liveState.value
+        // No time elapsed: rates cannot be computed, so they keep their last value; counts and latencies are current.
+        val rated = seconds > 0.0
         val snapshot =
             LiveMetrics(
-                inputFps = tickReceived / seconds,
-                inferenceFps = tickCompleted / seconds,
+                inputFps = if (rated) tickReceived / seconds else previous.inputFps,
+                inferenceFps = if (rated) tickCompleted / seconds else previous.inferenceFps,
                 inferenceMs = lastInferenceNanos.toMillisOrNull(),
                 e2eMs = lastE2eNanos.toMillisOrNull(),
                 droppedFrames = totalDropped,
@@ -202,6 +203,7 @@ class MetricsAggregator(
                         }
                     },
             )
+        if (!rated) return snapshot
         tickStartNanos = now
         tickReceived = 0
         tickCompleted = 0
