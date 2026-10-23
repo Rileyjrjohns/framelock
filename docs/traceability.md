@@ -103,10 +103,10 @@ amendment M5.
 | MS-6 | Rollback to the previous version on disk, repeatable, refused without one | store → `FileModelRepositoryTest`; swap under the pipeline lock: models:application → `ActivateModelTest`, `RollbackModelTest`, `RealPipelineSwapTest` | covered |
 | MS-7 | Audit lines stamped with the wall clock at write time, enums and versions only, rotated at the cap, a failing write dropped | store → `FileAuditLogTest` | covered |
 | MS-8 | `scripts/sign-model.sh` output (key pair, DER signature, manifest, zip) is accepted by the store; keys never overwritten | store → `SigningScriptTest` (needs bash, openssl, zip; skipped otherwise) | covered |
-| MS-9 | Debug bootstrap: with no active model the bundled package is imported then activated through the use cases; nothing otherwise; refusals reported | app → `ModelBootstrapTest`; on device: not yet run | covered (device not yet run) |
+| MS-9 | Debug bootstrap: with no active model the bundled package is imported then activated through the use cases; nothing otherwise; refusals reported | app → `ModelBootstrapTest`; on device (2026-10-23): first start imported then activated the bundled package, audited, old unsigned layout replaced | covered |
 | MS-10 | Overlay labels of the active model cached per version, refreshed after a swap, never read while drawing | app → `ActiveLabelsTest`; labels of a package: store → `FileModelRepositoryTest` | covered |
-| MS-11 | Models screen: import from a file, activate, rollback, disabled while `ModelSwapPolicy` refuses; Live ↔ Models navigation with system back | `AppGraph.modelsViewModel`, `MainActivity`; screen logic: models:ui tests; on device: not yet run | implemented, not yet run on device |
-| MS-12 | Trusted keys loaded from `assets/keys`; a release build with no key refuses every import | `TrustedKeyAssets`; signature rule: `FileModelRepositoryTest`; on device: not yet run | implemented, not yet run on device |
+| MS-11 | Models screen: import from a file, activate, rollback, disabled while `ModelSwapPolicy` refuses; Live ↔ Models navigation with system back | `AppGraph.modelsViewModel`, `MainActivity`; screen logic: models:ui tests; on device (2026-10-23) through the system file picker: a tampered package refused (bad signature, audited), a second signed version imported, activated and rolled back, the three actions disabled with an explanation while running | covered |
+| MS-12 | Trusted keys loaded from `assets/keys`; a release build with no key refuses every import | `TrustedKeyAssets`; signature rule: `FileModelRepositoryTest`; debug key checked on device (2026-10-23); release build without a key not yet run | covered (release case not yet run) |
 
 ## Later milestones
 
