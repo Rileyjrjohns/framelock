@@ -42,6 +42,10 @@ profileinstaller = "1.4.1"
 # Benchmark and the Baseline Profile plugin are released together: one version for both.
 benchmark = "1.5.0"
 uiautomator = "2.4.0"
+# Haze 2.0.1: newest stable (Maven Central + GitHub release 2.0.1, 2026-09-29). Backdrop blur for the glass panels.
+# Its POM targets Compose 1.12.1 (= our BOM) and Kotlin 2.4.20. API 23+; blurs on API 31+, translucent scrim below.
+# All Haze artifacts must share this version.
+haze = "2.0.1"
 
 # ---------- AndroidX Test (instrumented, JUnit 4) ----------
 androidxTest = "1.7.0"            # core/runner/rules; 1.8.0-alpha01 exists
@@ -106,6 +110,9 @@ androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
 
 androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }

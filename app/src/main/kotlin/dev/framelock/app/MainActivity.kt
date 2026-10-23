@@ -12,15 +12,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,14 +23,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.framelock.kernel.telemetry.ScreenId
 import dev.framelock.live.ui.LiveScreen
 import dev.framelock.live.ui.LiveViewModel
+import dev.framelock.live.ui.PermissionPrompt
 import dev.framelock.models.ui.ModelsScreen
 import dev.framelock.models.ui.ModelsViewModel
 
@@ -94,15 +86,11 @@ class MainActivity : ComponentActivity() {
         if (allowed) {
             content()
         } else {
-            Column(
-                Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(stringResource(R.string.camera_permission_needed), fontSize = 22.sp)
-                Button({ request.launch(Manifest.permission.CAMERA) }, Modifier.heightIn(min = 64.dp)) {
-                    Text(stringResource(R.string.camera_permission_grant), fontSize = 20.sp)
-                }
-            }
+            PermissionPrompt(
+                message = stringResource(R.string.camera_permission_needed),
+                actionLabel = stringResource(R.string.camera_permission_grant),
+                onAction = { request.launch(Manifest.permission.CAMERA) },
+            )
         }
     }
 }
