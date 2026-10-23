@@ -92,7 +92,7 @@ Dependency rules (ADR-014, enforced by `verifyModuleBoundaries` and Konsist, ADR
 - `ModelVersion`, `ModelManifest(version, sha256, signature, inputSpec, outputSpec)`, `ModelArtifact(manifest, location)`
 - `PipelineState`: `Idle`, `Connecting`, `NoSignal(reason)`, `Running(rate)`, `Degraded(cause, rate)`, `Paused(cause)` (ADR-013)
 - `ThermalLevel` (NONE … SHUTDOWN), `MemoryPressure` (NORMAL, MODERATE, CRITICAL)
-- `TelemetryEvent`: sealed, metrics only (see Telemetry)
+- `TelemetryEvent`: an open interface in the kernel; each feature defines a sealed family of metrics-only events (see Telemetry, ADR-014)
 
 ### Policies (pure, unit-tested)
 
@@ -104,7 +104,7 @@ Dependency rules (ADR-014, enforced by `verifyModuleBoundaries` and Konsist, ADR
 
 ### Ports
 
-Driven (outbound), implemented by adapters. They live in `dev.framelock.core.domain.port`, are plain (not `fun`) interfaces, and value types that travel through them (e.g. `SourceEvent`) are sealed:
+Driven (outbound), implemented by adapters. They live in `dev.framelock.<feature>.domain.port` (or `dev.framelock.kernel.port` for `Clock` and `Tracer`), are plain (not `fun`) interfaces, and value types that travel through them (e.g. `SourceEvent`) are sealed:
 
 ```kotlin
 interface FrameSource {
@@ -164,7 +164,7 @@ Rules:
 1. One inference at a time, on a dedicated single thread created by the engine adapter (`Executors.newSingleThreadExecutor().asCoroutineDispatcher()`, exposed as `InferenceEngine.dispatcher`), not `limitedParallelism(1)`: the GPU delegate must be created and invoked on the same thread. The pipeline runs `load`, `infer` and `close` on that dispatcher; the thread lives as long as the engine, so a model swap while idle stays on it (ADR-002).
 2. Latest frame wins. Frames arriving during an inference are conflated; dropped frames are counted and their buffers released immediately.
 3. A frame older than the last processed one, or from a previous session, is dropped.
-4. On `Disconnected`: state becomes `NoSignal`, and the current result is cleared in the same emission. An in-flight result is discarded on arrival (session mismatch). Reconnection follows `ReconnectPolicy`.
+4. On `Disconnected`: state becomes `NoSignal`, and the current result is cleared in the same emission. An in-flight result is discarded on arrival (session mismatch). Reconnection follows `ReconnectPolicy`: one loop at a time, whose backoff resets only once frames flow again; a refused permission is not retried. A failing event flow counts as a disconnection (`STREAM_ERROR`).
 5. Under memory or thermal pressure, the pipeline lowers its rate or pauses, as `InferenceRatePolicy` decides, and the state says why. It degrades; it never crashes.
 6. Every buffer is released in a `finally`. No per-frame allocation in steady state.
 7. `Tracer` sections around capture, preprocess, inference, postprocess and render.
@@ -179,7 +179,7 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
 
 - Models live outside the APK: `filesDir/models/<version>/{model.tflite, manifest.json}`, plus an `active` pointer file.
 - Import (in the demo, from a file picker): copy to a temp dir → verify SHA-256 and the ECDSA P-256 signature (`SHA256withECDSA`) against a public key embedded in the app → atomic move.
-- Activate: only when `ModelSwapPolicy` allows it. The engine loads and warms up the new model before the pointer switches; on failure, the previous model stays active.
+- Activate: only when `ModelSwapPolicy` allows it. The pipeline swaps atomically under its lifecycle lock (`ModelLoading.swapModel`): the engine loads and warms up the new model, then the repository switches its pointer; if either fails, the previous model is loaded back and the failure is audited. No session can start in the middle.
 - Rollback: the previous version stays on disk.
 - Every import, activation, rejection and rollback emits telemetry and an audit entry.
 - `scripts/sign-model.sh` signs a model with a private key kept out of the repo.
@@ -190,8 +190,8 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
   - `AppSession`
   - `ScreenViewed(ScreenId)`, `UiInteraction(ElementId)`
   - `PipelineWindow(inferenceMsP50, inferenceMsP95, e2eMsP50, e2eMsP95, inputFps, inferenceFps, droppedFrames)`
-  - `DeviceSnapshot(model, osVersion, batteryPct, batteryTempC, thermalLevel)`
-  - `ModelSwapped(from, to)`, `ModelRejected(reason)`, `PipelineDegraded(cause)`
+  - `DeviceSnapshotRecorded(model, osVersion, batteryPct, batteryTempC, thermalLevel)`
+  - `ModelSwapped(from, to)`, `ModelImported(version)`, `ModelRejected(reason)`, `PipelineDegraded(cause)`
 - `ScreenId` and `ElementId` are enums: tracking a new element is a reviewed code change.
 - `MetricsAggregator` aggregates over 10 s windows. No per-frame events.
 - End-to-end latency = render time − capture timestamp, on the same clock (`elapsedRealtimeNanos`).

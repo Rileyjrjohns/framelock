@@ -11,7 +11,7 @@ built-in Kotlin, and uses a Gradle API removed in Gradle 10. detekt 2.0 is still
 ## Decision
 
 - **Android Lint** on Android modules.
-- **ktlint 1.8.0 through Spotless**, on every Kotlin and Gradle Kotlin file, with the Compose rule set.
+- **ktlint 1.8.0 through Spotless**, on every Kotlin and Gradle Kotlin file, with the Compose rule set. Excluded: the architecture-test fixtures (they break rules on purpose) and hidden directories at the root.
 - **detekt 1.23.8 on the pure-Kotlin modules only** (`:shared:*`, every `domain` and `application`), with its default configuration.
 
 ## Consequences

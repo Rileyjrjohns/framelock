@@ -78,4 +78,8 @@ fails its own test. Module scopes must be non-empty.
     not recognised as a port: adding a port means adding it to both;
   - a `typealias` of a port is not followed;
   - the core import allowlist is import-level: a JDK class used by its fully qualified name without an import is not
-    seen (android and DI references are, in any form).
+    seen (android and DI references are, in any form);
+  - only classpaths are checked: a module that adds another module's source directory (`srcDir`) or declares a
+    project on `annotationProcessor` is not caught;
+  - nothing prevents another module from writing to the `TelemetrySink` port directly: by convention only
+    `TelemetryRecorder` does, and `:app` wires it.

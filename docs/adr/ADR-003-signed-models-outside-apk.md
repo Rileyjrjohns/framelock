@@ -34,3 +34,16 @@ capture session would change results mid-session.
 - Starting without an active model fails with a typed error. Importing is allowed only when idle or without signal
   (it costs CPU and I/O).
 - Refusals and failures emit `ModelRejected(reason)` with `SWAP_REFUSED` or `LOAD_FAILED`, plus an audit entry.
+
+### Amendment (2026-10-23, M1 review)
+
+- The swap lock is the pipeline's lifecycle lock. `ModelLoading.swapModel(target, restore, commit)` loads the target,
+  runs the repository commit and, if the commit fails, loads `restore` back, all under that lock; the commit and the
+  restore cannot be cancelled. `StartPipeline` reads the active model under the same lock. Engine and repository
+  therefore always agree, and a session never starts in the middle of a swap.
+- A swap is accepted when no session is connected (`Idle`, `NoSignal`), as `ModelSwapPolicy` says.
+- Activating the model that is already active changes nothing and records nothing.
+- A successful import emits `ModelImported(version)`; a restore that fails after a failed commit is audited too.
+- Model versions cannot be `.` or `..` (they name directories).
+- Left for M5, with the model store: audit entries also need a wall-clock time (the `Clock` port is monotonic and
+  resets at boot), and the signature must cover the manifest (version, tensor specs), not only the model file.

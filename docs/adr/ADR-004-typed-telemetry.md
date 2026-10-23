@@ -27,3 +27,8 @@ Telemetry must never carry images or free text. Per-frame events would also cost
 - `PipelineWindow`: a window with no frame is not emitted; percentiles use the nearest-rank method; latency fields are
   null when the window has no sample.
 - The debug HUD reads a separate `LiveMetrics` state updated once per second; it is never sent as telemetry.
+- Since ADR-014, `TelemetryEvent` is an open interface and each feature has a sealed family (`UsageTelemetry`,
+  `LiveTelemetry`, `ModelTelemetry`); the allowlist rejects any other type (`UNKNOWN_EVENT`). A Konsist rule checks
+  that event fields are primitives, project enums or value classes, or one of the bounded strings above.
+- `PipelineDegraded(ENGINE_ERROR)` is sent at most once per session, so an intermittent engine fault cannot produce
+  an event per frame. Telemetry callbacks are guarded: a failing sink never affects the pipeline.

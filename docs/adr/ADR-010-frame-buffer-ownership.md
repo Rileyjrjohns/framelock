@@ -24,3 +24,7 @@ collected must be released too.
 ## Consequences
 
 `PipelineUiState` carries the ids and the result for display decisions; pixels are only reachable through the slot.
+The slot and the state are updated one after the other, so the renderer draws the overlay only when the frame read in
+the slot has the (session, id) of `PipelineUiState.annotated`. A new `Connected` clears the slot even without a
+`Disconnected` before it. The pipeline waits for the slot lock to show a frame: the renderer copies pixels, nothing
+else, while holding it.

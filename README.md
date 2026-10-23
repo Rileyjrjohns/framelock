@@ -4,7 +4,7 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 (HDMI → USB) or from the device camera; a detection model runs on each analysed frame, and the result is
 drawn on the exact frame it was computed from.
 
-> Status: **M0, skeleton.** Modules, build conventions and architecture checks are in place; no feature yet.
+> Status: **M1, core with fakes.** Domain, pipeline, metrics and use cases are implemented and tested on the JVM; no screen and no real adapter yet (M2 onwards).
 
 ## Requirements
 

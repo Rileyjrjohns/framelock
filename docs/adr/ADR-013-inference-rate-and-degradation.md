@@ -23,8 +23,11 @@
   starts by at least `1 / fps`.
 - States: `Running(rate)` when nothing limits; `Degraded(cause, rate)` when a cap applies; `Paused(cause)` on pause.
   An engine failure on one frame gives `Degraded(ENGINE_ERROR, rate)` until the next successful inference.
-- `droppedFrames` in telemetry counts every frame the pipeline closed without analysing it; the HUD shows the split by
-  `DropReason` (conflated, late, stale session, paused, stopped).
+- `droppedFrames` in telemetry counts every frame the pipeline closed without analysing it, so that
+  received = completed + dropped; the HUD shows the split by `DropReason` (conflated, late, stale session, paused,
+  stopped, engine error). A result discarded because the session ended was analysed: it counts as completed.
+- A relaxed rate takes effect at once, even during a throttle wait. A monitor that fails keeps its last level and is
+  subscribed again a second later, so the pipeline also sees the device cool down.
 
 ## Consequences
 
