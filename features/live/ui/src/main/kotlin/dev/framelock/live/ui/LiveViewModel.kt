@@ -15,6 +15,8 @@ import dev.framelock.live.application.usecase.StartPipeline
 import dev.framelock.live.application.usecase.StartResult
 import dev.framelock.live.application.usecase.StopPipeline
 import dev.framelock.live.domain.inference.LabelId
+import dev.framelock.live.domain.system.MemoryPressure
+import dev.framelock.live.domain.system.ThermalLevel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +42,9 @@ class LiveViewModel(
     val selectedSource: StateFlow<SourceOption>,
     /** The active source and, for a capture device, its negotiated mode; null when stopped. UI text only. */
     val sourceDescription: StateFlow<String?>,
+    /** The levels the pipeline degrades on, for the debug HUD (ADR-013, ADR-017). */
+    val thermal: StateFlow<ThermalLevel>,
+    val memory: StateFlow<MemoryPressure>,
 ) : ViewModel() {
     val state: StateFlow<PipelineUiState> = observe.state
     val live: StateFlow<LiveMetrics> = observe.live

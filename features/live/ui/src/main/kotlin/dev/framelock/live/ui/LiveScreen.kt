@@ -44,6 +44,8 @@ import dev.framelock.live.application.pipeline.PipelineUiState
 import dev.framelock.live.application.usecase.StartResult
 import dev.framelock.live.domain.inference.LabelId
 import dev.framelock.live.domain.pipeline.PipelineState
+import dev.framelock.live.domain.system.MemoryPressure
+import dev.framelock.live.domain.system.ThermalLevel
 import java.util.Locale
 
 /** Minimum touch target: usable with gloves and at a glance (docs/architecture.md, "UI"). */
@@ -65,13 +67,15 @@ fun LiveScreen(
     val selected by viewModel.selectedSource.collectAsStateWithLifecycle()
     val options by viewModel.sourceOptions.collectAsStateWithLifecycle()
     val description by viewModel.sourceDescription.collectAsStateWithLifecycle()
+    val thermal by viewModel.thermal.collectAsStateWithLifecycle()
+    val memory by viewModel.memory.collectAsStateWithLifecycle()
     Column(modifier.fillMaxSize().background(Color.Black)) {
         StatusBanner(ui, startResult)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             ui.annotated?.let { annotated ->
                 AnalysedFrame(annotated, viewModel.renderer::bitmapFor, viewModel.labelOf, viewModel::onDrawn)
             }
-            if (hudVisible) Hud(live, description, Modifier.align(Alignment.TopStart))
+            if (hudVisible) Hud(live, description, thermal, memory, Modifier.align(Alignment.TopStart))
         }
         Controls(
             running = ui.state != PipelineState.Idle,
@@ -196,6 +200,8 @@ private fun DrawScope.fitInto(
 private fun Hud(
     live: LiveMetrics,
     sourceDescription: String?,
+    thermal: ThermalLevel,
+    memory: MemoryPressure,
     modifier: Modifier = Modifier,
 ) {
     val ms = { value: Double? -> value?.let { String.format(Locale.ROOT, "%.1f", it) } ?: "–" }
@@ -212,6 +218,7 @@ private fun Hud(
         // The source line changes only when a session starts.
         sourceDescription?.let { Text(stringResource(R.string.hud_source, it), color = Color.White, fontSize = 14.sp) }
         Text(metrics, color = Color.White, fontSize = 14.sp)
+        Text(stringResource(R.string.hud_system, thermal.name, memory.name), color = Color.White, fontSize = 14.sp)
     }
 }
 

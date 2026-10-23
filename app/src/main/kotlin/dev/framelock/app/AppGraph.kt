@@ -20,9 +20,11 @@ import dev.framelock.live.domain.policy.ReconnectPolicy
 import dev.framelock.live.inference.litert.LiteRtInferenceEngine
 import dev.framelock.live.system.AndroidClock
 import dev.framelock.live.system.AndroidDeviceInfoProvider
+import dev.framelock.live.system.AndroidMemoryPressureMonitor
 import dev.framelock.live.system.AndroidTracer
-import dev.framelock.live.system.NotYetObservedMemoryPressure
 import dev.framelock.live.system.PowerManagerThermalMonitor
+import dev.framelock.live.system.SharedMemoryPressureMonitor
+import dev.framelock.live.system.SharedThermalMonitor
 import dev.framelock.live.ui.LiveViewModel
 import dev.framelock.telemetry.application.TelemetryRecorder
 import dev.framelock.telemetry.application.TrackScreen
@@ -98,12 +100,16 @@ class AppGraph(
             uvcDescription = uvcSource.description,
             scope = scope,
         )
+
+    // The pipeline and the debug HUD share one subscription to each monitor (and so one headroom poller).
+    private val thermal = SharedThermalMonitor(PowerManagerThermalMonitor(appContext), scope)
+    private val memory = SharedMemoryPressureMonitor(AndroidMemoryPressureMonitor(appContext, clock), scope)
     private val pipeline =
         InferencePipeline(
             source = source,
             engine = LiteRtInferenceEngine(tracer),
-            thermal = PowerManagerThermalMonitor(context.applicationContext),
-            memory = NotYetObservedMemoryPressure(),
+            thermal = thermal,
+            memory = memory,
             clock = clock,
             tracer = tracer,
             metrics = metrics,
@@ -139,6 +145,8 @@ class AppGraph(
             chooseSource = sourceSelection::select,
             selectedSource = sourceSelection.current,
             sourceDescription = source.activeDescription,
+            thermal = thermal.state,
+            memory = memory.state,
         )
 
     private companion object {
