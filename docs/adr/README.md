@@ -19,9 +19,9 @@ One file per decision: context, decision, consequences. A decision changes only 
 | [013](ADR-013-inference-rate-and-degradation.md) | Inference rate and degradation | Accepted |
 | [014](ADR-014-feature-first-modules.md) | Feature-first modules, one module per layer | Accepted |
 | [015](ADR-015-first-real-loop.md) | First real loop (M2) choices | Accepted |
+| [016](ADR-016-uvc-capture.md) | UVC capture (M3) choices | Accepted |
 
 Amended in M1: ADR-003 (model and audit ports, swap lock), ADR-004 (telemetry string fields, events, windows).
-Planned (M3): UVC library and its USB permission handling.
 
 ## Template
 

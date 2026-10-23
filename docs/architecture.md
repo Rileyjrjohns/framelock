@@ -57,7 +57,7 @@ flowchart LR
 :shared:testing                 pure Kotlin — a fake for every port + clocks (test fixtures)
 :features:live:domain           pure Kotlin — frames, results, pipeline state, policies, ports, LiveTelemetry
 :features:live:application      pure Kotlin — InferencePipeline, MetricsAggregator, Start/Stop/Observe/ReportFrameRendered
-:features:live:capture-uvc      FrameSource over a USB/UVC capture card
+:features:live:capture-uvc      FrameSource over a USB/UVC capture card (UVCAndroid, ADR-016)
 :features:live:capture-camerax  FrameSource over CameraX (fallback, works without hardware)
 :features:live:inference-litert InferenceEngine over LiteRT (GPU delegate, CPU/XNNPACK fallback)
 :features:live:system           ThermalMonitor, MemoryPressureMonitor, DeviceInfoProvider, Clock, Tracer
@@ -85,7 +85,7 @@ Dependency rules (ADR-014, enforced by `verifyModuleBoundaries` and Konsist, ADR
 
 ### Entities and value objects
 
-- `FrameId`: monotonic within a session. `SessionId`: incremented on every (re)connection.
+- `FrameId`: monotonic within a session. `SessionId`: incremented on every (re)connection, from one `SessionIdSequence` shared by all sources.
 - `Frame(id, sessionId, captureTimestampNanos, width, height, image: ImageBuffer)`. `ImageBuffer` is a domain interface (format, planes, `close()` returns the buffer to its pool).
 - `InferenceResult(frameId, sessionId, modelVersion, detections, inferenceNanos)`
 - `Detection(box: NormalizedRect, label: LabelId, score: Float)`
@@ -164,7 +164,7 @@ Rules:
 1. One inference at a time, on a dedicated single thread created by the engine adapter (`Executors.newSingleThreadExecutor().asCoroutineDispatcher()`, exposed as `InferenceEngine.dispatcher`), not `limitedParallelism(1)`: the GPU delegate must be created and invoked on the same thread. The pipeline runs `load`, `infer` and `close` on that dispatcher; the thread lives as long as the engine, so a model swap while idle stays on it (ADR-002).
 2. Latest frame wins. Frames arriving during an inference are conflated; dropped frames are counted and their buffers released immediately.
 3. A frame older than the last processed one, or from a previous session, is dropped.
-4. On `Disconnected`: state becomes `NoSignal`, and the current result is cleared in the same emission. An in-flight result is discarded on arrival (session mismatch). Reconnection follows `ReconnectPolicy`: one loop at a time, whose backoff resets only once frames flow again; a refused permission is not retried. A failing event flow counts as a disconnection (`STREAM_ERROR`).
+4. On `Disconnected`: state becomes `NoSignal`, and the current result is cleared in the same emission. An in-flight result is discarded on arrival (session mismatch). Reconnection follows `ReconnectPolicy`: one loop at a time, whose backoff resets only once frames flow again; a refused permission is not retried. A failing event flow counts as a disconnection (`STREAM_ERROR`). A source reports why it lost the stream (`DisconnectReason`: `DEVICE_DETACHED`, `STREAM_ERROR`, `PERMISSION_DENIED`, `OPEN_FAILED`, `SIGNAL_LOST` for a device that stopped sending frames); every reason but `PERMISSION_DENIED` is retried.
 5. Under memory or thermal pressure, the pipeline lowers its rate or pauses, as `InferenceRatePolicy` decides, and the state says why. It degrades; it never crashes.
 6. Every buffer is released in a `finally`. No per-frame allocation in steady state.
 7. `Tracer` sections around capture, preprocess, inference, postprocess and render.
@@ -254,6 +254,7 @@ Each requirement links to its tests in `docs/traceability.md`.
 - ADR-011: clock base and end-to-end latency
 - ADR-012: scope of "no per-frame allocation"
 - ADR-013: inference rate and degradation table
+- ADR-016: UVC capture, source selection and shared session ids
 
 ## Out of scope
 

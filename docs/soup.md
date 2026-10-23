@@ -38,6 +38,39 @@ every milestone. Licences are read from each artifact's POM.
 | AndroidX Tracing | 2.0.5 | Trace sections for Perfetto | Apache-2.0 |
 | kotlinx-coroutines-android | 1.11.0 | Main dispatcher | Apache-2.0 |
 
+### Added in M3 (shipped)
+
+| Component | Version | Purpose | Licence |
+|---|---|---|---|
+| UVCAndroid (`com.herohan:UVCAndroid`) | 1.0.13 (latest stable, released 2026-06-10; verified on Maven Central 2026-10-23) | USB video class source for the capture card (low-level `USBMonitor` and `UVCCamera`, ADR-016) | Apache-2.0 (POM) |
+
+Bundled native libraries of UVCAndroid 1.0.13, for arm64-v8a, armeabi-v7a, x86 and x86_64 (the 64-bit ones are 16 KB
+aligned; `zipalign -c -P 16` passes on the debug APK):
+
+| Library | Licence | Note |
+|---|---|---|
+| libUVCCamera (JNI part of UVCAndroid) | Apache-2.0 | |
+| libuvc | BSD | |
+| libusb 1.0 | LGPL-2.1 | Shipped as a shared object (`libusb1.0.so`), not statically linked |
+| libjpeg-turbo | BSD-style (IJG, Modified BSD, zlib) | MJPEG decoding |
+| libyuv | BSD | Pixel format conversion |
+
+Their licences come from the library's source tree and are not carried by the POM.
+
+Transitive dependencies of UVCAndroid 1.0.13 (declared version, resolved version in the app):
+
+| Component | Declared | Resolved | Licence |
+|---|---|---|---|
+| `androidx.core:core` | 1.13.1 | 1.19.1 | Apache-2.0 |
+| `androidx.legacy:legacy-support-v4` (with core-utils, core-ui, fragment, media, print, loader and related support libraries) | 1.0.0 | 1.0.0 | Apache-2.0 |
+| `androidx.appcompat:appcompat` | 1.6.1 | 1.6.1 | Apache-2.0 |
+| `androidx.annotation:annotation` | 1.8.0 | 1.10.0 | Apache-2.0 |
+| `cn.hutool:hutool-core` | 5.8.35 | 5.8.35 | Not verified: its POM declares no licence. The project is published under Mulan PSL v2, which is to be confirmed from its repository before a release |
+
+The AAR's manifest also declares `RECORD_AUDIO`, `MANAGE_EXTERNAL_STORAGE`, `READ_EXTERNAL_STORAGE`,
+`WRITE_EXTERNAL_STORAGE` and `FOREGROUND_SERVICE`; the app removes them from the merged manifest. Open library issues
+that matter here are listed in ADR-016.
+
 ### Model (downloaded, not committed)
 
 | Component | Version | Source | Licence |
@@ -77,7 +110,6 @@ Recorded with their milestone so licences are reviewed before code depends on th
 
 | Component | Version | Milestone | Licence |
 |---|---|---|---|
-| UVCAndroid (`com.herohan:UVCAndroid`) | 1.0.13 | M3 | Apache-2.0; bundles libusb (LGPL-2.1), libuvc (BSD), libjpeg-turbo and libyuv (BSD); transitive hutool-core (Mulan PSL v2) |
 | kotlinx-serialization-json | 1.12.0 | M5/M6 | Apache-2.0 |
 | Room | 2.8.5 | M6 | Apache-2.0 |
 | WorkManager | 2.12.0 | M6 | Apache-2.0 |

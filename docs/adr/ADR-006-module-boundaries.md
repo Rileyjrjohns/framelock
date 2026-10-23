@@ -58,7 +58,7 @@ imports **and** from fully qualified names in the code (comments and strings rem
 - **Ports** are the non-sealed interfaces of `dev.framelock.kernel.port` and `dev.framelock.<feature>.domain.port`. A
   port named in architecture.md must be declared in a port package, may not be a `fun interface`, and may be
   implemented only in adapters, in `:shared:testing` or in test sources: never in a domain, an application, a UI
-  module or the app. Implementations are found through named, nested and local types (indirect parents included,
+  module or the app (one listed exception, ADR-016: `SelectingFrameSource`). Implementations are found through named, nested and local types (indirect parents included,
   names resolved through imports, aliases, star imports and the same package) and through object expressions.
 - Pure modules never call `limitedParallelism` (ADR-002).
 

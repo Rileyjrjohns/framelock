@@ -4,7 +4,7 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 (HDMI → USB) or from the device camera; a detection model runs on each analysed frame, and the result is
 drawn on the exact frame it was computed from.
 
-> Status: **M2, first real loop.** CameraX source, LiteRT inference (GPU delegate, CPU fallback) and the live screen with its synchronized overlay and debug HUD. Capture card in M3.
+> Status: **M3, capture card.** The source is chosen when a session starts: a camera exposed as external by Android, else an attached USB video class device (capture card, through UVCAndroid), else the back camera. LiteRT inference (GPU delegate, CPU fallback) and the live screen with its synchronized overlay and debug HUD as in M2.
 
 ## Requirements
 
@@ -20,8 +20,18 @@ drawn on the exact frame it was computed from.
 ```
 
 Open the app, allow the camera, tap **Start**. The status banner says what the pipeline does; **Debug HUD** shows
-input and inference fps, inference and end-to-end latency, and dropped frames. In M2 the source is the device camera;
-the capture card arrives in M3.
+input and inference fps, inference and end-to-end latency, and dropped frames.
+
+### With a capture card
+
+Plug the card in before tapping **Start**; Android asks once for the USB permission. The source is chosen at start:
+stop and start again after plugging or unplugging. When the card stops sending frames for 2 s the banner shows *No
+signal* and the app retries. The chosen capture mode (format, size, rate) is logged once per stream:
+`adb logcat -s UvcFrameSource`.
+
+A phone usually has a single USB-C port, which the card takes, so `adb` over USB is not available. Use wireless
+debugging instead: *Developer options → Wireless debugging → Pair device with pairing code*, then
+`adb pair <host:port>` and `adb connect <host:port>`; `./gradlew installDebug` and `adb logcat` work over that link.
 
 ## Build and test
 

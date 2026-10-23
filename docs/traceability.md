@@ -55,6 +55,21 @@ time with the fakes of `:shared:testing`, except `InferencePipelineThreadingTest
 | UC-1 | Start/Stop/Observe use cases; device snapshot once per start | live:application → `PipelineUseCasesTest` | covered |
 | LIFE-1 | start, stop, close and swaps serialised; a stop is never lost and always completes; a closed pipeline refuses to start (ADR-003) | live:application → `InferencePipelineLifecycleTest` (real threads), `InferencePipelineRobustnessTest` | covered |
 
+## Capture card (M3)
+
+The UVC source itself needs a device and a capture card; its decisions are testable only where they are pure.
+
+| ID | Requirement | Tests (module → class) | Status |
+|---|---|---|---|
+| UVC-1 | `UvcFrameSource`: first attached UVC device, USB permission, open, stream as `RGBA_8888` frames in a pool, teardown on every end, reconnection by `open()` | capture-uvc → `UvcFrameSource`; checked on the real card | written, not yet run on a card |
+| UVC-2 | Capture mode: size closest to 1280x720, YUYV at 30 fps or more, else MJPEG at the highest rate (ADR-016) | capture-uvc → `CaptureModeSelectorTest` | covered |
+| UVC-3 | No-signal watchdog: `SIGNAL_LOST` after 2 s without a frame, `OPEN_FAILED` after 5 s without a first frame, one verdict per stream | capture-uvc → `FrameWatchdogTest` | covered |
+| UVC-4 | RGBA pool: tight copy, skip when empty or of another size, release once, replaced on a size change | capture-uvc → `RgbaFramePoolTest` | covered |
+| UVC-5 | A device is UVC when its class or one of its interfaces is video | capture-uvc → `UvcDeviceClassTest` | covered |
+| UVC-6 | Source choice: external camera, then UVC device, then back camera; kept until `close()`; events merged | app → `SelectingFrameSourceTest` | covered |
+| DOM-5 | Session ids from one thread-safe sequence shared by all sources | live:domain → `SessionIdTest` | covered |
+| PIPE-4b | `SIGNAL_LOST` gives `NoSignal` and is retried like `DEVICE_DETACHED`; a `Disconnected` raised while a reconnection is opening is retried | live:application → `InferencePipelineConnectionTest` | covered |
+
 ## Later milestones
 
 | ID | Requirement | Status |
@@ -64,7 +79,7 @@ time with the fakes of `:shared:testing`, except `InferencePipelineThreadingTest
 | PIPE-7b | Trace sections for capture, preprocess, postprocess (ADR-009 ownership) | capture-camerax, inference-litert (visible in Perfetto; no automated test); render section planned M7 | implemented, untested |
 | LBL-1 | Overlay names come from the labels embedded in the model, whatever the zip offset convention | app → `EmbeddedLabelsTest` (both conventions, stored and deflated entries, the fetched model when present) | covered |
 | CAP-1 | Camera frames delivered upright and following display rotation, without a new session | capture-camerax → `YuvFramePoolTest` (pool swapped only on a size change, buffers of a replaced pool released to it); rotation checked on device (2026-10-23) | covered (rotation manual) |
-| UI-1 | "No signal" banner shown and overlay hidden on disconnect | planned M3 |
+| UI-1 | "No signal" banner shown and overlay hidden on disconnect | live:ui → `LiveScreen` shows the `NoSignal` banner (`state_no_signal`) and the overlay comes from `PipelineUiState.annotated`, which `NoSignal` clears (live:application → `InferencePipelineConnectionTest`); no UI test yet | implemented, untested |
 | MS-1 … MS-3 | Bad signature rejected; atomic activation; rollback on disk | planned M5 |
 | TELA-1, TELA-2 | Telemetry buffer cap; batching | planned M6 |
 | PIPE-6b, PERF-1 | No per-frame allocation (measured); performance results | planned M7 |
