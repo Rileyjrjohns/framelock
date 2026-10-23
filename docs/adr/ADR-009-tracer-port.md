@@ -20,5 +20,5 @@ typos and unbounded cardinality.
 
 ## Consequences
 
-The androidx.tracing implementation lives in `:adapters:system` (M4). Sections that cross threads (render) use async
+The androidx.tracing implementation lives in `:features:live:system` (M4). Sections that cross threads (render) use async
 sections there, behind the same port.

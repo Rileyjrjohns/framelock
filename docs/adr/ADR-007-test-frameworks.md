@@ -13,7 +13,7 @@ The core is tested on the JVM with virtual time; Android adapters need some test
   run on the JUnit Platform through `useJUnitPlatform()`; no extra Gradle plugin is needed.
 - **Instrumented tests**: JUnit 4 with AndroidX Test.
 - **No Robolectric**: Room and WorkManager are tested instrumented.
-- **Fakes**: `:core:testing` provides a fake for every port. It has no test framework on its main classpath (its
+- **Fakes**: `:shared:testing` provides a fake for every port. It has no test framework on its main classpath (its
   assertions throw `AssertionError`), so both JUnit Jupiter and instrumented JUnit 4 tests can use it.
 
 ## Consequences

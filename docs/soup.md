@@ -10,7 +10,7 @@ every milestone. Licences are read from each artifact's POM.
 | Component | Version | Purpose | Licence |
 |---|---|---|---|
 | Kotlin standard library | 2.4.21 | Language runtime | Apache-2.0 |
-| kotlinx-coroutines-core | 1.11.0 | Coroutines and Flow (the only library allowed in `:core:*`) | Apache-2.0 |
+| kotlinx-coroutines-core | 1.11.0 | Coroutines and Flow (the only library allowed in pure modules) | Apache-2.0 |
 | AndroidX Core | 1.19.1 | Android compatibility APIs | Apache-2.0 |
 | Jetpack Compose (BOM 2026.09.00: ui 1.12.1, foundation, material3 1.4.0) | BOM 2026.09.00 | UI | Apache-2.0 |
 | AndroidX Activity Compose | 1.13.0 | Compose entry point | Apache-2.0 |
@@ -50,7 +50,7 @@ every milestone. Licences are read from each artifact's POM.
 | Spotless | 8.10.4 | Formatting check | Apache-2.0 |
 | ktlint | 1.8.0 | Kotlin style | MIT |
 | Compose rules for ktlint (`io.nlopez.compose.rules`) | 0.6.8 | Compose lint rules | Apache-2.0 |
-| detekt | 1.23.8 | Static analysis of `:core:*` | Apache-2.0 |
+| detekt | 1.23.8 | Static analysis of pure modules | Apache-2.0 |
 | GitHub Actions: checkout v7, setup-java v6, upload-artifact v7 | — | CI | MIT |
 | GitHub Action: gradle/actions/setup-gradle v6 | — | CI, wrapper validation, cache | MIT; caching component under the Gradle Terms of Use |
 

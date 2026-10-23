@@ -8,51 +8,78 @@ The code must be readable by the next engineer without a tour.
 
 ## Principles
 
-- Hexagonal architecture (ports & adapters) with clean-architecture layering. Dependencies point inward: `app → adapters → domain ← application`.
-- `core` modules are pure Kotlin (JVM). No `android.*`, no DI annotations. Only `kotlinx-coroutines-core` is allowed.
+- Feature-first hexagonal architecture (ADR-014): each feature keeps its own layers as separate modules, and dependencies point inward: `ui → application → domain ← adapters`, all of them on `shared:kernel`.
+- Features depend on each other in one direction only: `models → live`, `telemetry → live, models`.
+- Pure-Kotlin modules (`shared:*`, every `domain` and `application`): no `android.*`, no DI annotations. Only `kotlinx-coroutines-core` is allowed.
 - Everything external sits behind a port: capture, inference runtime, model storage, thermal, memory, device info, telemetry transport, clock, tracing.
 - Correctness before throughput: a result is never displayed on a frame it was not computed from.
 - Measure before optimising. Every performance claim is backed by a trace in `docs/perf/`.
 
 ```mermaid
 flowchart LR
-  subgraph core [core — pure Kotlin]
-    D[domain<br/>entities · policies · ports]
-    A[application<br/>use cases · InferencePipeline]
-    A --> D
+  K[shared:kernel<br/>Clock · Tracer · model descriptors · TelemetryEvent]
+  subgraph live [feature: live]
+    LD[domain<br/>Frame · policies · ports]
+    LA[application<br/>InferencePipeline · metrics · use cases]
+    LAD[capture-uvc · capture-camerax<br/>inference-litert · system]
+    LUI[ui]
+    LA --> LD
+    LAD --> LD
+    LUI --> LA
   end
-  UVC[capture-uvc] --> D
-  CX[capture-camerax] --> D
-  LR[inference-litert] --> D
-  MS[model-store] --> D
-  SYS[system] --> D
-  TEL[telemetry] --> D
-  APP[app<br/>Compose · ViewModels · composition root] --> A
-  APP --> UVC & CX & LR & MS & SYS & TEL
+  subgraph models [feature: models]
+    MD[domain<br/>ModelSwapPolicy · ports]
+    MA[application<br/>import · activate · rollback]
+    MS[store]
+    MUI[ui]
+    MA --> MD
+    MS --> MD
+    MUI --> MA
+  end
+  subgraph telemetry [feature: telemetry]
+    TD[domain<br/>allowlist · TelemetrySink]
+    TA[application<br/>recorder · tracking]
+    TR[room]
+    TA --> TD
+    TR --> TD
+  end
+  LD --> K
+  MD --> LD
+  MA --> LA
+  TD --> LD & MD
+  APP[app<br/>composition root] --> LA & LAD & LUI & MA & MS & MUI & TA & TR
 ```
 
 ## Modules
 
 ```
-:core:domain                pure Kotlin — entities, value objects, policies, ports
-:core:application           pure Kotlin — use cases, InferencePipeline, MetricsAggregator
-:core:testing               pure Kotlin — a fake for every port + FakeClock (test fixtures)
-:adapters:capture-uvc       FrameSource over a USB/UVC capture card
-:adapters:capture-camerax   FrameSource over CameraX (fallback, works without hardware)
-:adapters:inference-litert  InferenceEngine over LiteRT (GPU delegate, CPU/XNNPACK fallback)
-:adapters:model-store       ModelRepository: versioned models on disk, signature check, atomic activate/rollback
-:adapters:system            ThermalMonitor, MemoryPressureMonitor, DeviceInfoProvider, Clock, Tracer
-:adapters:telemetry         TelemetrySink: Room buffer + WorkManager batch upload
-:app                        Compose UI, ViewModels, composition root (manual DI)
+:shared:kernel                  pure Kotlin — Clock, Tracer, model descriptors, TelemetryEvent, ScreenId, ElementId
+:shared:testing                 pure Kotlin — a fake for every port + clocks (test fixtures)
+:features:live:domain           pure Kotlin — frames, results, pipeline state, policies, ports, LiveTelemetry
+:features:live:application      pure Kotlin — InferencePipeline, MetricsAggregator, Start/Stop/Observe/ReportFrameRendered
+:features:live:capture-uvc      FrameSource over a USB/UVC capture card
+:features:live:capture-camerax  FrameSource over CameraX (fallback, works without hardware)
+:features:live:inference-litert InferenceEngine over LiteRT (GPU delegate, CPU/XNNPACK fallback)
+:features:live:system           ThermalMonitor, MemoryPressureMonitor, DeviceInfoProvider, Clock, Tracer
+:features:live:ui               live screen with synchronized overlay, debug HUD
+:features:models:domain         pure Kotlin — ModelSource, ModelSwapPolicy, ports ModelRepository and AuditLog, ModelTelemetry
+:features:models:application    pure Kotlin — ImportModel, ActivateModel, RollbackModel
+:features:models:store          ModelRepository: versioned models on disk, signature check, atomic activate/rollback
+:features:models:ui             models screen
+:features:telemetry:domain      pure Kotlin — TelemetryAllowlist, port TelemetrySink
+:features:telemetry:application pure Kotlin — TelemetryRecorder, TrackScreen, TrackUiInteraction
+:features:telemetry:room        TelemetrySink: Room buffer + WorkManager batch upload
+:app                            composition root (manual DI, `AppGraph`)
 ```
 
-Optional: `:adapters:inference-onnx`, to prove the inference runtime is swappable without touching the core.
+Optional: `:features:live:inference-onnx`, to prove the inference runtime is swappable without touching the domain.
 
-Dependency rules:
-- Adapters depend on `:core:domain` only.
-- Adapters never depend on each other.
+Dependency rules (ADR-014, enforced by `verifyModuleBoundaries` and Konsist, ADR-006):
+- A domain sees the kernel and the domains of upstream features; an application also sees its own domain and upstream applications.
+- An adapter sees its feature's domain (and what that domain sees), never another adapter nor an application.
+- A UI module sees its feature's application and domain.
 - Only `:app` sees every module; it wires them in a single `AppGraph`.
-- Enforced by the Gradle module graph and by Konsist tests.
+- Each feature defines its own telemetry events; producers emit through a function wired in `:app`, so no feature depends on the telemetry feature.
 
 ## Domain
 
@@ -117,9 +144,9 @@ interface Tracer { fun begin(section: TraceSection); fun end() }  // + inline Tr
 interface AuditLog { fun record(entry: AuditEntry) }                // ADR-003
 ```
 
-Driving (inbound): the use cases in `:core:application`: `StartPipeline`, `StopPipeline`, `ObservePipeline`, `ReportFrameRendered` (ADR-011), `ImportModel`, `ActivateModel`, `RollbackModel`, `TrackScreen`, `TrackUiInteraction`.
+Driving (inbound): the use cases of each feature's `application` module: `StartPipeline`, `StopPipeline`, `ObservePipeline`, `ReportFrameRendered` (ADR-011), `ImportModel`, `ActivateModel`, `RollbackModel`, `TrackScreen`, `TrackUiInteraction`.
 
-## Pipeline (`:core:application`)
+## Pipeline (`:features:live:application`)
 
 ```
 FrameSource ──events──▶ InferencePipeline

@@ -23,13 +23,17 @@ drawn on the exact frame it was computed from.
 
 | Path | Content |
 |---|---|
-| `core/domain` | Entities, policies and ports. Pure Kotlin. |
-| `core/application` | Use cases, `InferencePipeline`, `MetricsAggregator`. Pure Kotlin. |
-| `core/testing` | A fake for every port, shared by all tests. |
-| `adapters/*` | One Android library per external dependency: capture (UVC, CameraX), LiteRT, model storage, system, telemetry. |
-| `app` | Compose UI and the composition root (manual DI). |
+| `shared/kernel` | Shared vocabulary: clock, tracing, model descriptors, telemetry event types. Pure Kotlin. |
+| `shared/testing` | A fake for every port, shared by all tests. |
+| `features/live` | Capture, inference and display: `domain`, `application` (pipeline, metrics), adapters (UVC, CameraX, LiteRT, system), `ui`. |
+| `features/models` | Model import, signature check, activation and rollback: `domain`, `application`, `store`, `ui`. |
+| `features/telemetry` | Metrics-only telemetry: `domain` (allowlist), `application` (recorder), `room`. |
+| `app` | Composition root (manual DI). |
 | `architecture-tests` | Konsist rules. |
 | `build-logic` | Gradle convention plugins and the module boundary check. |
+
+Each feature keeps its hexagonal layers as separate modules; `domain` and `application` are pure Kotlin
+([ADR-014](docs/adr/ADR-014-feature-first-modules.md)).
 
 Design: [docs/architecture.md](docs/architecture.md). Decisions: [docs/adr/](docs/adr/).
 Requirement-to-test mapping: [docs/traceability.md](docs/traceability.md).
