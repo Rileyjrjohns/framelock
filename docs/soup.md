@@ -90,12 +90,35 @@ kotlinx-serialization-json 1.12.0 the latest on Maven Central; licences read fro
 | AndroidX WorkManager (`work-runtime`) | 2.12.0 | Periodic telemetry upload | Apache-2.0 |
 | kotlinx-serialization-json (with `kotlinx-serialization-core`) | 1.12.0 (core raised from 1.7.3 by this dependency) | JSON encoding of telemetry events, written by hand, in the adapter only | Apache-2.0 |
 
+### Added for the glass interface
+
+Versions checked on 2026-10-23: Haze 2.0.1 is the latest stable release (Maven Central `dev/chrisbanes/haze/*/maven-metadata.xml`
+and GitHub release 2.0.1 of 2026-09-29, not marked as a prerelease; its README still calls the 2.0 line "in beta", which
+the release flag and the Maven `release` status contradict); Inter 4.1 is the latest release of `github.com/rsms/inter`
+(2024-11-16).
+
+| Component | Version | Purpose | Licence |
+|---|---|---|---|
+| Haze (`dev.chrisbanes.haze:haze`, `haze-blur`, with `haze-utils`) | 2.0.1 | Backdrop blur of the glass panels over the live video and the Models list (`live:ui`, `models:ui`). Blurs with `RenderEffect` on API 31+; below that the panels draw their own flat translucent fill (Haze's own scrim fallback is not used: it raises the tint's alpha with the blur radius until it is nearly opaque) | Apache-2.0 (POM) |
+| Inter (Regular, Medium, SemiBold, Bold; static TTF from `extras/ttf` of the 4.1 release zip, SHA-256 of the zip `9883fdd4…b11e`) | 4.1 | The interface font, `app/src/main/res/font/inter_*.ttf`, wired in `FramelockTheme` | SIL Open Font License 1.1 (copy in `docs/licenses/Inter-OFL-1.1.txt`) |
+
+Transitive of Haze 2.0.1, as resolved: `org.jetbrains.compose.{ui,animation}` 1.12.1 (the Compose Multiplatform
+coordinates of the same Compose release as the BOM; their Android variants resolve beside the AndroidX ones with no
+duplicate class), `org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose` 2.11.0, `androidx.collection` 1.6.0,
+`org.jetbrains.kotlin:kotlin-stdlib` 2.4.20 (raised to 2.4.21 by the build). All Apache-2.0.
+
+Haze notes that matter here: a source drawn in Compose (our frame is drawn by a `Canvas`, so it qualifies) is recorded
+into a graphics layer once per change and replayed by each effect; on API 31 only, Haze also recaptures after any
+snapshot state change in the app, so the pulsing status dot costs more there (measure in M7). Haze supports API 23+.
+The Inter variable font was not used: four static weights are 1.7 MB against 0.9 MB for the variable file, but
+need no variation settings on API 29.
+
 ### Icons
 
-Ten Material Symbols (Outlined, filled variant, 24 px, weight 400) are copied as vector drawables from
+Eleven Material Symbols (Outlined, filled variant, 24 px, weight 400) are copied as vector drawables from
 `github.com/google/material-design-icons` (`symbols/android/<name>/materialsymbolsoutlined/<name>_fill1_24px.xml`),
 Apache-2.0, with the `tint` and `autoMirrored` attributes dropped: `live:ui` has `ic_play_arrow`, `ic_stop`,
-`ic_videocam`, `ic_bug_report`, `ic_neurology`; `models:ui` has `ic_arrow_back`, `ic_check_circle`, `ic_history`,
+`ic_videocam`, `ic_bug_report`, `ic_neurology`, `ic_expand_more`; `models:ui` has `ic_arrow_back`, `ic_check_circle`, `ic_history`,
 `ic_upload_file`, `ic_undo`. `androidx.compose.material:material-icons-core` and `-extended` are not used: the BOM
 2026.09.00 pins both at 1.7.8, the last release, and
 [the Compose documentation](https://developer.android.com/develop/ui/compose/graphics/images/material) says the
