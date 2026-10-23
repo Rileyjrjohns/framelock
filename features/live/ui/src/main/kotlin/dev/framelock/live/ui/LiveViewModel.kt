@@ -1,5 +1,6 @@
 package dev.framelock.live.ui
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.framelock.kernel.port.Clock
@@ -45,7 +46,11 @@ class LiveViewModel(
     private var lastReported: AnnotatedFrame? = null
 
     fun start() {
-        viewModelScope.launch { lastStart.value = start.invoke() }
+        viewModelScope.launch {
+            val result = start.invoke()
+            if (result is StartResult.LoadFailed) Log.e(TAG, "Model load failed", result.cause)
+            lastStart.value = result
+        }
     }
 
     fun stop() {
@@ -61,5 +66,9 @@ class LiveViewModel(
         if (frame == lastReported) return
         lastReported = frame
         reportRendered(frame.frameId, frame.sessionId, clock.nowNanos())
+    }
+
+    private companion object {
+        const val TAG = "LiveViewModel"
     }
 }

@@ -42,7 +42,7 @@ every milestone. Licences are read from each artifact's POM.
 
 | Component | Version | Source | Licence |
 |---|---|---|---|
-| EfficientDet-Lite0 int8, with embedded COCO labels | MediaPipe object detector v1, SHA-256 `0720bf24…23bb` | `scripts/fetch-model.sh` (storage.googleapis.com/mediapipe-models) | Apache-2.0 (per the model's publisher; to confirm against its model card before any distribution); trained on COCO 2017 (annotations CC BY 4.0, images under Flickr terms) |
+| EfficientDet-Lite0 with the TFLite detection post-processing op and embedded COCO labels | Kaggle Models `tensorflow/efficientdet/tfLite/lite0-detection-metadata` v1, SHA-256 `2e04c53b…4e0b` | `scripts/fetch-model.sh` (Kaggle API download) | Apache-2.0 (Kaggle model page); trained on COCO 2017 (annotations CC BY 4.0, images under Flickr terms) |
 
 ## Tests only
 

@@ -11,6 +11,6 @@
     <string name="action_stop">Stop</string>
     <string name="action_hud">Debug HUD</string>
     <string name="start_no_model">No model installed. Run scripts/fetch-model.sh and reinstall.</string>
-    <string name="start_load_failed">The model could not be loaded.</string>
+    <string name="start_load_failed">The model could not be loaded: %1$s</string>
     <string name="hud_line">in %1$.1f fps · inf %2$.1f fps · %3$s ms · e2e %4$s ms · drops %5$d</string>
 </resources>

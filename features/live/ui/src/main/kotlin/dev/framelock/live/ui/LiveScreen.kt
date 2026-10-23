@@ -85,9 +85,18 @@ private fun StatusBanner(
         Text(text, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         ui.model?.let { Text(stringResource(R.string.model_version, it.value), color = Color.White, fontSize = 18.sp) }
         when (startResult) {
-            StartResult.NoActiveModel -> Text(stringResource(R.string.start_no_model), color = Color.White)
-            is StartResult.LoadFailed -> Text(stringResource(R.string.start_load_failed), color = Color.White)
-            else -> Unit
+            StartResult.NoActiveModel -> {
+                Text(stringResource(R.string.start_no_model), color = Color.White)
+            }
+
+            is StartResult.LoadFailed -> {
+                val reason = startResult.cause.message ?: startResult.cause::class.simpleName.orEmpty()
+                Text(stringResource(R.string.start_load_failed, reason), color = Color.White)
+            }
+
+            else -> {
+                Unit
+            }
         }
     }
 }

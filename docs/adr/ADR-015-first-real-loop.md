@@ -15,8 +15,10 @@ M2 connects a real source, a real runtime and a screen. Several choices are temp
 - **Timestamp base per session.** A CameraX timestamp within one second of `elapsedRealtimeNanos` on the first frame
   is taken as realtime; otherwise frames are stamped on arrival (ADR-011). `Connected` is sent with the first frame,
   so its `StreamSpec` has the real resolution.
-- **Detection model.** EfficientDet-Lite0 int8 (uint8 `[1, 320, 320, 3]` input, TFLite detection post-processing
-  outputs), fetched by `scripts/fetch-model.sh` with a pinned SHA-256; not committed. The debug app copies it into
+- **Detection model.** EfficientDet-Lite0 from Kaggle Models (uint8 `[1, 320, 320, 3]` input, TFLite detection
+  post-processing outputs), fetched by `scripts/fetch-model.sh` with pinned SHA-256s; not committed. The MediaPipe
+  build of the same model was rejected: it has no post-processing op (two raw anchor outputs), so decoding and NMS
+  would have to be written here. The debug app copies it into
   `filesDir/models/<version>/`. It is **not signed** until the model store of M5.
 - **LiteRT 1.4.2** (ADR-005): GPU delegate when `CompatibilityList` supports the device and the interpreter builds
   with it; otherwise CPU with XNNPACK. The model's tensor shapes are checked at load; a warm-up run follows.

@@ -12,7 +12,8 @@ import java.security.MessageDigest
 import java.util.zip.ZipFile
 
 /**
- * The model used until the model store of M5: the public EfficientDet-Lite0 (docs/soup.md), fetched by
+ * The model used until the model store of M5: the public EfficientDet-Lite0 with its post-processing op
+ * (docs/soup.md), fetched by
  * `scripts/fetch-model.sh` into the debug assets and copied once into `filesDir/models/<version>/` (ADR-003 layout).
  * It is NOT signed: the signature check arrives with the store. Release builds have no asset, so no model.
  */
@@ -34,15 +35,20 @@ internal class DevelopmentModel(
         val target = File(context.filesDir, "models/${VERSION.value}/model.tflite")
         target.parentFile?.mkdirs()
         asset.use { input -> target.outputStream().use { input.copyTo(it) } }
-        // The model embeds its labels as a zip entry (TFLite metadata).
-        labels =
-            runCatching {
-                ZipFile(target).use { zip ->
-                    zip.getInputStream(zip.getEntry(LABELS)).bufferedReader().readLines()
-                }
-            }.getOrDefault(emptyList())
+        labels = runCatching { embeddedLabels(target) }.getOrDefault(emptyList())
         installed = ModelArtifact(manifest(sha256(target)), target.absolutePath)
     }
+
+    /** TFLite metadata embeds the label file as a zip entry; its name depends on the publisher. */
+    private fun embeddedLabels(model: File): List<String> =
+        ZipFile(model).use { zip ->
+            val entry = zip.entries().asSequence().firstOrNull { it.name.endsWith(".txt") } ?: return emptyList()
+            zip
+                .getInputStream(entry)
+                .bufferedReader()
+                .readLines()
+                .filter { it.isNotBlank() }
+        }
 
     private fun manifest(sha256: String) =
         ModelManifest(
@@ -75,7 +81,6 @@ internal class DevelopmentModel(
     private companion object {
         val VERSION = ModelVersion("efficientdet-lite0-int8")
         const val ASSET = "models/efficientdet_lite0.tflite"
-        const val LABELS = "labels.txt"
         const val INPUT_SIZE = 320
         const val RGB = 3
         const val DETECTIONS = 25

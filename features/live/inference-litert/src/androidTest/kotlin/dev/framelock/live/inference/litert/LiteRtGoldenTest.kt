@@ -101,7 +101,7 @@ class LiteRtGoldenTest {
         val manifest =
             ModelManifest(
                 ModelVersion("efficientdet-lite0-int8"),
-                sha256 = "0720bf247bd76e6594ea28fa9c6f7c5242be774818997dbbeffc4da460c723bb",
+                sha256 = "2e04c53bfeac0ac2a30c057c7e2a777594ce39baaac35a92f74fb1e8c4fc4e0b",
                 signature = "unsigned-test",
                 inputSpec = TensorSpec(listOf(1, SIZE, SIZE, 3), TensorDataType.UINT8),
                 outputSpec = listOf(TensorSpec(listOf(1, OUTPUTS, 4), TensorDataType.FLOAT32)),
