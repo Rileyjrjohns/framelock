@@ -69,13 +69,19 @@ class InferencePipelineBufferLifecycleTest {
     fun `pending slot buffer is released on stop`() =
         runTest {
             val h = PipelineHarness(this)
+            h.thermal.set(ThermalLevel.SEVERE)
             h.startConnected()
-            h.engine.onInfer = { if (it.id.value == 0L) h.emit(h.frame(1)) }
             h.emit(h.frame(0))
+            runCurrent()
+            val waiting = h.frame(1)
+            h.emit(waiting)
+            runCurrent()
+            val pendingBeforeStop = !(waiting.image as FakeImageBuffer).isClosed && h.engine.inferredFrames.size == 1
 
             h.pipeline.stop()
-            runCurrent()
 
+            assertTrue(pendingBeforeStop, "the frame must wait in the pending slot before stop")
+            assertTrue((waiting.image as FakeImageBuffer).isClosed)
             h.pool.assertAllReleased()
         }
 

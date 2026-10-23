@@ -1,11 +1,14 @@
 package dev.framelock.live.application.pipeline
 
+import dev.framelock.kernel.model.ModelVersion
+import dev.framelock.live.domain.frame.DisconnectReason
 import dev.framelock.live.domain.frame.SessionId
 import dev.framelock.testing.TestModels
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -20,6 +23,58 @@ class InferencePipelineModelLoadingTest {
 
             assertThrows<SessionActiveException> { h.pipeline.loadModel(TestModels.artifact("model-2")) }
             assertEquals(listOf(h.model), h.engine.loadedModels)
+        }
+
+    @Test
+    fun `loading a model without signal is accepted`() =
+        runTest {
+            val h = PipelineHarness(this)
+            h.startConnected()
+            h.source.disconnect(DisconnectReason.DEVICE_DETACHED)
+            runCurrent()
+
+            h.pipeline.loadModel(TestModels.artifact("model-2"))
+
+            assertEquals(ModelVersion("model-2"), h.engine.loadedVersion)
+        }
+
+    @Test
+    fun `a commit that throws loads the previous model back`() =
+        runTest {
+            val h = PipelineHarness(this)
+            h.pipeline.loadModel(h.model)
+
+            val outcome = h.pipeline.swapModel(TestModels.artifact("model-2"), restore = h.model) { error("disk full") }
+
+            assertTrue(outcome is SwapOutcome.CommitFailed && outcome.restored, "$outcome")
+            assertEquals(h.model.manifest.version, h.engine.loadedVersion)
+        }
+
+    @Test
+    fun `a swap is refused while a session is connected`() =
+        runTest {
+            val h = PipelineHarness(this)
+            h.startConnected()
+
+            val outcome =
+                h.pipeline.swapModel(
+                    TestModels.artifact("model-2"),
+                    restore = h.model,
+                ) { Result.success(Unit) }
+
+            assertEquals(SwapOutcome.SessionActive, outcome)
+        }
+
+    @Test
+    fun `an artifact with the same version but other content is loaded again`() =
+        runTest {
+            val h = PipelineHarness(this)
+            h.pipeline.loadModel(h.model)
+            val sameVersion = h.model.copy(manifest = h.model.manifest.copy(sha256 = "b".repeat(64)))
+
+            h.pipeline.loadModel(sameVersion)
+
+            assertEquals(2, h.engine.loadedModels.size)
         }
 
     @Test

@@ -31,7 +31,10 @@ private const val NONE = Long.MIN_VALUE
  * short lock and allocates nothing in steady state (ADR-012); only closing a window allocates its event, and
  * [tick] its [LiveMetrics]. [publish] is called on the calling thread after the lock is released, so a slow sink
  * never blocks the other threads.
+ *
+ * One small state machine behind one lock: splitting it would spread the locking.
  */
+@Suppress("TooManyFunctions")
 class MetricsAggregator(
     private val clock: Clock,
     private val publish: (TelemetryEvent) -> Unit,
@@ -130,6 +133,27 @@ class MetricsAggregator(
         }
     }
 
+    /**
+     * The session stopped: publishes the window in progress (if it received frames) with rates over its actual
+     * duration, and restarts the window grid and the HUD rates at the next call, so neither a late window nor the
+     * idle time between sessions distorts the figures.
+     */
+    fun endSession() {
+        val closed =
+            synchronized(lock) {
+                if (!started) return
+                val elapsed = clock.nowNanos() - windowStartNanos
+                val window = if (received > 0 && elapsed > 0) windowEvent(elapsed / NANOS_PER_SECOND) else null
+                resetWindow()
+                pendingRenders.clear()
+                tickReceived = 0
+                tickCompleted = 0
+                started = false
+                window
+            }
+        closed?.let(publish)
+    }
+
     /** Closes the window if it is due and refreshes [live] with the rates since the previous tick. */
     fun tick() {
         var closed: LiveTelemetry.PipelineWindow? = null
@@ -163,24 +187,28 @@ class MetricsAggregator(
         val elapsed = now - windowStartNanos
         if (elapsed < windowNanos) return null
 
-        val window = if (received > 0) windowEvent() else null
+        val window = if (received > 0) windowEvent(windowSeconds) else null
+        resetWindow()
+        windowStartNanos += elapsed / windowNanos * windowNanos
+        return window
+    }
+
+    private fun resetWindow() {
         received = 0
         completed = 0
         dropped = 0
         inferenceSamples.clear()
         e2eSamples.clear()
-        windowStartNanos += elapsed / windowNanos * windowNanos
-        return window
     }
 
-    private fun windowEvent() =
+    private fun windowEvent(seconds: Double) =
         LiveTelemetry.PipelineWindow(
             inferenceMsP50 = inferenceSamples.percentileMs(MEDIAN, scratch),
             inferenceMsP95 = inferenceSamples.percentileMs(TAIL, scratch),
             e2eMsP50 = e2eSamples.percentileMs(MEDIAN, scratch),
             e2eMsP95 = e2eSamples.percentileMs(TAIL, scratch),
-            inputFps = received / windowSeconds,
-            inferenceFps = completed / windowSeconds,
+            inputFps = received / seconds,
+            inferenceFps = completed / seconds,
             droppedFrames = dropped,
         )
 

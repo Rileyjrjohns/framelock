@@ -2,18 +2,21 @@ package dev.framelock.live.application.metrics
 
 /** Why the pipeline closed a frame without analysing it (ADR-013). */
 enum class DropReason {
-    /** A newer frame arrived while an inference was running (latest frame wins). */
+    /** Replaced by a newer frame while waiting (latest frame wins). */
     CONFLATED,
 
-    /** The frame is older than the last one processed. */
+    /** Not newer than a frame already taken for inference. */
     LATE,
 
-    /** The frame belongs to a previous session. */
+    /** From another session, or discarded by a disconnection. */
     STALE_SESSION,
 
-    /** The pipeline is paused (thermal or memory pressure). */
+    /** Received while inference is paused (ADR-013). */
     PAUSED,
 
-    /** The pipeline is stopping or stopped. */
+    /** Held when the session stopped. */
     STOPPED,
+
+    /** The engine failed on it: no result. */
+    ENGINE_ERROR,
 }

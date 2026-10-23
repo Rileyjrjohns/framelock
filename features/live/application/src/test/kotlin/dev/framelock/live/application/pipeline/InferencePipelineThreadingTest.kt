@@ -2,6 +2,7 @@ package dev.framelock.live.application.pipeline
 
 import dev.framelock.live.application.metrics.MetricsAggregator
 import dev.framelock.live.domain.frame.SessionId
+import dev.framelock.live.domain.pipeline.PipelineState
 import dev.framelock.live.domain.policy.ReconnectConfig
 import dev.framelock.live.domain.policy.ReconnectPolicy
 import dev.framelock.testing.FakeFrameSource
@@ -82,6 +83,50 @@ class InferencePipelineThreadingTest {
 
             assertEquals(engine.inferThreads, engine.loadThreads)
         }
+
+    @Test
+    fun `the pipeline never calls infer concurrently, even on a multi-threaded engine dispatcher`() {
+        val fourThreads = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
+        val engine = FakeInferenceEngine(fourThreads)
+        val source = FakeFrameSource()
+        val pipeline =
+            InferencePipeline(
+                source,
+                engine,
+                FakeThermalMonitor(),
+                FakeMemoryPressureMonitor(),
+                ManualClock(),
+                RecordingTracer(),
+                MetricsAggregator(ManualClock(), {}),
+                {},
+                ReconnectPolicy(ReconnectConfig(10.milliseconds, 100.milliseconds, 0.0), Random(1)),
+                scope,
+            )
+        try {
+            runBlocking {
+                pipeline.start(TestModels.artifact("model-1"))
+                source.connect(SessionId(1))
+                awaitUntil { pipeline.state.value.state is PipelineState.Running }
+                engine.onInfer = { Thread.sleep(1) }
+                val producers =
+                    List(4) { producer ->
+                        launch(Dispatchers.Default) {
+                            repeat(50) { i ->
+                                source.emit(TestFrames.frame(pool, (i * 4 + producer).toLong()))
+                                delay(1.milliseconds)
+                            }
+                        }
+                    }
+                producers.forEach { it.join() }
+                awaitUntil { pool.outstandingCount <= 1 }
+
+                assertTrue(engine.inferredFrames.size > 1, "only ${engine.inferredFrames.size} inference(s)")
+                assertEquals(1, engine.maxConcurrentInfers)
+            }
+        } finally {
+            fourThreads.close()
+        }
+    }
 
     @Test
     fun `infer is never called concurrently`() =

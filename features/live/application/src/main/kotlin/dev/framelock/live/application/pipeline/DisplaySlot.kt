@@ -25,6 +25,10 @@ class DisplaySlot {
             frame = null
         }
 
-    /** Runs [block] with the frame on screen, or null. Copy the pixels inside; never keep the frame. */
+    /**
+     * Runs [block] with the frame on screen, or null. Copy the pixels inside, quickly (the pipeline waits for this
+     * lock to publish the next frame), and never keep the frame. The slot and `PipelineUiState.annotated` are updated
+     * one after the other: draw the overlay only if the frame's (session, id) equals the annotated one (ADR-001).
+     */
     inline fun <T> read(block: (Frame?) -> T): T = synchronized(lock) { block(frame) }
 }

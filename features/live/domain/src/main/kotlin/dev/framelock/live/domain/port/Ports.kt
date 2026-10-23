@@ -25,7 +25,10 @@ interface FrameSource {
 }
 
 sealed interface SourceEvent {
-    /** A new session started; the source allocated [sessionId], strictly greater than any previous one. */
+    /**
+     * A new session started. The source allocated [sessionId], strictly greater than any id it emitted before, for
+     * the whole lifetime of the source, across close() and open(): the pipeline refuses a smaller or equal one.
+     */
     data class Connected(
         val spec: StreamSpec,
         val sessionId: SessionId,

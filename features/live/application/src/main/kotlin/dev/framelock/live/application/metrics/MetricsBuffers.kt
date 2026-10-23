@@ -56,6 +56,11 @@ internal class PendingRenders(
         next = (next + 1) % sessions.size
     }
 
+    fun clear() {
+        sessions.fill(FREE)
+        next = 0
+    }
+
     /** Removes and returns the capture time of this frame, or [NOT_PENDING] when it is unknown, stale or taken. */
     fun take(
         session: SessionId,

@@ -37,6 +37,8 @@ import kotlin.time.Duration.Companion.seconds
 internal class PipelineHarness(
     private val test: TestScope,
     engineDispatcher: CoroutineDispatcher = StandardTestDispatcher(test.testScheduler),
+    /** Called after each pipeline telemetry event is recorded; may throw to simulate a failing sink. */
+    private val onTelemetry: (TelemetryEvent) -> Unit = {},
 ) {
     /** Sized for bursts that allocate many frames before the pipeline can release any. */
     val pool = FakeImageBufferPool(capacity = POOL_CAPACITY)
@@ -60,7 +62,10 @@ internal class PipelineHarness(
             clock = clock,
             tracer = tracer,
             metrics = metrics,
-            telemetry = { telemetry += it },
+            telemetry = {
+                telemetry += it
+                onTelemetry(it)
+            },
             reconnectPolicy = ReconnectPolicy(reconnectConfig, Random(SEED)),
             scope = test.backgroundScope,
         )

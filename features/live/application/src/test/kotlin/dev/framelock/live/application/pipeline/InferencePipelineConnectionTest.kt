@@ -131,7 +131,7 @@ class InferencePipelineConnectionTest {
         }
 
     @Test
-    fun `successful reconnection resets the backoff`() =
+    fun `a reconnection that delivers frames resets the backoff`() =
         runTest {
             val h = PipelineHarness(this)
             h.startConnected()
@@ -139,6 +139,9 @@ class InferencePipelineConnectionTest {
             h.source.onOpen = { h.source.connect(SessionId(it.toLong() + 1)) }
             h.source.disconnect(DisconnectReason.DEVICE_DETACHED)
             advanceTimeBy(100 + 200 + 400)
+            runCurrent()
+            // Frames flow again: the stream works (a Connected alone is not enough, see the robustness tests).
+            h.emit(h.frame(0, session = h.source.openCalls.toLong() + 1))
             runCurrent()
             val opensAfterReconnect = h.source.openCalls
 

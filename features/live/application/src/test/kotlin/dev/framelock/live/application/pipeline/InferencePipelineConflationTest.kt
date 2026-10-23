@@ -145,7 +145,8 @@ class InferencePipelineConflationTest {
             }
 
             assertTrue(starts.size >= 5, "starts: $starts")
-            assertTrue(starts.zipWithNext().all { (a, b) -> b - a >= 100 }, "starts: $starts")
+            // At least the 100 ms interval, and not more than one frame period later (frames arrive every 10 ms).
+            assertTrue(starts.zipWithNext().all { (a, b) -> b - a in 100..110 }, "starts: $starts")
         }
 
     @Test
