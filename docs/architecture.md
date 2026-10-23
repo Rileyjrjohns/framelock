@@ -64,7 +64,7 @@ flowchart LR
 :features:live:ui               live screen with synchronized overlay, debug HUD
 :features:models:domain         pure Kotlin — ModelSource, ModelSwapPolicy, ports ModelRepository and AuditLog, ModelTelemetry
 :features:models:application    pure Kotlin — ImportModel, ActivateModel, RollbackModel
-:features:models:store          ModelRepository: versioned models on disk, signature check, atomic activate/rollback
+:features:models:store          ModelRepository and AuditLog: versioned models on disk, signature check, atomic activate/rollback, labels
 :features:models:ui             models screen
 :features:telemetry:domain      pure Kotlin — TelemetryAllowlist, port TelemetrySink
 :features:telemetry:application pure Kotlin — TelemetryRecorder, TrackScreen, TrackUiInteraction
@@ -177,12 +177,14 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
 
 ## Model management
 
-- Models live outside the APK: `filesDir/models/<version>/{model.tflite, manifest.json}`, plus an `active` pointer file.
-- Import (in the demo, from a file picker): copy to a temp dir → verify SHA-256 and the ECDSA P-256 signature (`SHA256withECDSA`) against a public key embedded in the app → atomic move.
+- Models live outside the APK: `filesDir/models/<version>/{model.tflite, manifest.properties, manifest.sig, labels.txt?}`, with `active` and `previous` pointer files (ADR-003, amendment M5).
+- A model travels as one `.flmodel` file: a zip of those files. `manifest.properties` holds the version, the SHA-256 of the model (and labels) and the tensor specs; `manifest.sig` is an ECDSA P-256 signature of its exact bytes, so one signature covers the manifest, the model and the labels.
+- Import (in the demo, from a file picker): unpack into a staging directory under the zip rules (known names, size limits) → verify the signature against the public keys embedded in the app (`assets/keys`) → check the SHA-256 of the model and labels → atomic move.
 - Activate: only when `ModelSwapPolicy` allows it. The pipeline swaps atomically under its lifecycle lock (`ModelLoading.swapModel`): the engine loads and warms up the new model, then the repository switches its pointer; if either fails, the previous model is loaded back and the failure is audited. No session can start in the middle.
 - Rollback: the previous version stays on disk.
 - Every import, activation, rejection and rollback emits telemetry and an audit entry.
-- `scripts/sign-model.sh` signs a model with a private key kept out of the repo.
+- `scripts/sign-model.sh` creates a key pair and signs a model with a private key kept out of the repo.
+- The audit trail is `filesDir/audit/audit.log` (capped, rotated once): wall-clock time, action, version, outcome, reason. Debug builds bundle a signed package that is imported and activated through the use cases at first start.
 
 ## Telemetry
 

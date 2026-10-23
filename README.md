@@ -4,7 +4,9 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 (HDMI → USB) or from the device camera; a detection model runs on each analysed frame, and the result is
 drawn on the exact frame it was computed from.
 
-> Status: **M4, system adapters.** Thermal (status listener plus forecast headroom on Android 11+) and memory pressure (trim callbacks plus `ActivityManager.MemoryInfo` polling) now drive the degradation of ADR-013 ([ADR-017](docs/adr/ADR-017-system-adapters.md)); the HUD shows both.
+> Status: **M5, model store.** Models are imported from signed `.flmodel` packages (ECDSA P-256 over a manifest that covers the model and its labels), activated and rolled back from a Models screen, with an audit trail ([ADR-003](docs/adr/ADR-003-signed-models-outside-apk.md), amendment M5).
+>
+> Before that, **M4, system adapters.** Thermal (status listener plus forecast headroom on Android 11+) and memory pressure (trim callbacks plus `ActivityManager.MemoryInfo` polling) now drive the degradation of ADR-013 ([ADR-017](docs/adr/ADR-017-system-adapters.md)); the HUD shows both.
 >
 > Before that, **M3, capture card.** The source is chosen when a session starts: a camera exposed as external by Android, else an attached USB video class device (capture card, through UVCAndroid), else the back camera. LiteRT inference (GPU delegate, CPU fallback) and the live screen with its synchronized overlay and debug HUD as in M2.
 
@@ -17,12 +19,37 @@ drawn on the exact frame it was computed from.
 ## Run
 
 ```bash
-./scripts/fetch-model.sh                 # downloads the public detection model (checked by SHA-256)
+./scripts/fetch-model.sh                 # downloads the public detection model (checked by SHA-256), signs it for debug builds
 ./gradlew installDebug                   # on a connected Android 10+ device
 ```
 
-Open the app, allow the camera, tap **Start**. The status banner says what the pipeline does; **Debug HUD** shows
+The debug build bundles the signed model and a development public key; at first start it imports and activates the
+model like any other import. Open the app, allow the camera, tap **Start**. The status banner says what the pipeline does; **Debug HUD** shows
 input and inference fps, inference and end-to-end latency, and dropped frames.
+
+### Models
+
+A model is one `.flmodel` file (a zip of `model.tflite`, `manifest.properties`, `manifest.sig` and optionally
+`labels.txt`). The app imports only packages whose manifest is signed by a key it trusts, and checks the SHA-256 of
+the model and labels against the signed manifest. Keys are kept outside the repository.
+
+```bash
+# once: an ECDSA P-256 key pair in ~/.framelock/keys/ (never overwritten); keep release.pem private
+./scripts/sign-model.sh --new-key
+# sign a model (tensor specs are <dims joined by x>:<FLOAT32|UINT8|INT8>, outputs separated by ;)
+./scripts/sign-model.sh --model my.tflite --version my-model-1 --input 1x320x320x3:UINT8 \
+  --outputs '1x25x4:FLOAT32;1x25:FLOAT32;1x25:FLOAT32;1:FLOAT32' --key ~/.framelock/keys/release.pem \
+  --labels labels.txt --out my-model-1.flmodel          # --labels is optional: else the labels embedded in the model are used
+# put it on the device, then in the app: Models -> Import, pick the file, then Activate
+adb push my-model-1.flmodel /sdcard/Download/
+```
+
+The app trusts every `*.pub.pem` file in its `assets/keys/`. The debug build trusts the development key written by
+`scripts/fetch-model.sh` (`app/src/debug/assets/keys/`, not committed). **No release key exists yet**: to ship one,
+create it with `--new-key` and copy its `release.pub.pem` into `app/src/main/assets/keys/` (public keys can be committed);
+until then a release build refuses every import. Importing and swapping are only possible while no session runs
+(the Models screen disables them otherwise). *Roll back* returns to the previous version, which stays on disk; the audit
+trail is `filesDir/audit/audit.log` (`adb shell run-as dev.framelock cat files/audit/audit.log` on a debug build).
 
 ### With a capture card
 
