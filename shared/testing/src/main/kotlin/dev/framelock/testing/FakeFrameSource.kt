@@ -39,7 +39,7 @@ class FakeFrameSource : FrameSource {
      * (failed ones included). Tests use it to script the events of the new connection, typically with [connect].
      */
     @Volatile
-    var onOpen: (attempt: Int) -> Unit = {}
+    var onOpen: suspend (attempt: Int) -> Unit = {}
 
     val openCalls: Int get() = synchronized(lock) { openCallCount }
     val closeCalls: Int get() = synchronized(lock) { closeCallCount }

@@ -16,4 +16,12 @@ data class StreamSpec(
     val timestampSource: TimestampSource,
 )
 
-enum class DisconnectReason { DEVICE_DETACHED, STREAM_ERROR, PERMISSION_DENIED, OPEN_FAILED }
+enum class DisconnectReason {
+    DEVICE_DETACHED,
+    STREAM_ERROR,
+    PERMISSION_DENIED,
+    OPEN_FAILED,
+
+    /** The device is still there but stopped sending frames (a capture card with no video input, for instance). */
+    SIGNAL_LOST,
+}

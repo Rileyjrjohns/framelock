@@ -32,6 +32,18 @@ value class SessionId(
     }
 }
 
+/**
+ * Allocates session ids, strictly increasing from [SessionId.FIRST]. One instance is shared by every source of the
+ * app, so a switch from one source to another never gives the pipeline a non-increasing id. Thread-safe: sources
+ * allocate from their own threads.
+ */
+class SessionIdSequence {
+    private var last = 0L
+
+    @Synchronized
+    fun next(): SessionId = SessionId(++last)
+}
+
 /** Allocates frame ids for one source. Not thread-safe: a source emits from one thread. */
 class FrameIdSequence {
     private var next = 0L
