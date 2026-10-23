@@ -90,6 +90,17 @@ kotlinx-serialization-json 1.12.0 the latest on Maven Central; licences read fro
 | AndroidX WorkManager (`work-runtime`) | 2.12.0 | Periodic telemetry upload | Apache-2.0 |
 | kotlinx-serialization-json (with `kotlinx-serialization-core`) | 1.12.0 (core raised from 1.7.3 by this dependency) | JSON encoding of telemetry events, written by hand, in the adapter only | Apache-2.0 |
 
+### Icons
+
+Ten Material Symbols (Outlined, filled variant, 24 px, weight 400) are copied as vector drawables from
+`github.com/google/material-design-icons` (`symbols/android/<name>/materialsymbolsoutlined/<name>_fill1_24px.xml`),
+Apache-2.0, with the `tint` and `autoMirrored` attributes dropped: `live:ui` has `ic_play_arrow`, `ic_stop`,
+`ic_videocam`, `ic_bug_report`, `ic_neurology`; `models:ui` has `ic_arrow_back`, `ic_check_circle`, `ic_history`,
+`ic_upload_file`, `ic_undo`. `androidx.compose.material:material-icons-core` and `-extended` are not used: the BOM
+2026.09.00 pins both at 1.7.8, the last release, and
+[the Compose documentation](https://developer.android.com/develop/ui/compose/graphics/images/material) says the
+artifact "is no longer maintained or recommended for use in your apps", and recommends Material Symbols as XML.
+
 ## Tests only
 
 | Component | Version | Purpose | Licence |

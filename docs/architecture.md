@@ -204,11 +204,16 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
 
 ## UI (Compose)
 
-- Live screen: video with overlay, plus a large status banner (Running / No signal / Degraded: thermal / Model vX).
+- Live screen: the analysed frame fills the screen, letterboxed on black to its own aspect ratio (what you see is what was analysed, ADR-001), edge to edge under transparent system bars; every overlay pads itself by the window insets, display cutouts included.
+  - Status: a large rounded pill overlaid at the top (state in bold ≥ 24 sp on a colour chosen for AA contrast with white text, model version underneath). A missing or unloadable model is explained in a card right under it.
+  - Detections: rounded boxes in a fixed per-class colour, a filled label chip (black or white text by contrast) at the box's top-left corner, moved inside or below the box when it would leave the frame. Boxes and frame go through the same fit.
+  - Controls: Start/Stop is the primary button (≥ 72 dp, green or red, icon and text); source, debug HUD toggle and Models sit next to it, each ≥ 64 dp. Portrait: a translucent bar over the bottom of the video. Landscape (the capture-card case): a rail beside the video, so it never covers part of the analysed frame.
+  - Stopped with nothing to draw: a centred hint instead of a black void.
 - Built for a two-second glance and imprecise touch: touch targets ≥ 64 dp, WCAG AA contrast at least, no critical action behind a small tap, no gesture-only actions.
-- Source picker (button in the controls row, enabled only while stopped; a change applies at the next start): Auto, back, front, external camera, each attached UVC device.
-- Debug HUD (toggle): active source and, for UVC, capture mode; input fps, inference fps, inference ms, e2e ms, thermal level, memory pressure, dropped frames.
-- Models screen: list, activate, rollback, disabled whenever `ModelSwapPolicy` says no.
+- Source picker (button in the controls, enabled only while stopped; a change applies at the next start): Auto, back, front, external camera, each attached UVC device.
+- Debug HUD (toggle): a compact translucent card at the top-end with labelled rows, in a monospaced face: active source and, for UVC, capture mode; input fps, inference fps, inference ms, e2e ms, dropped frames, thermal level, memory pressure.
+- Models screen: top app bar with a back arrow, one card per version (Active / Previous chips, Activate), the last outcome or the reason the actions are off in a status card, Import and Roll back at the bottom; disabled whenever `ModelSwapPolicy` says no.
+- One dark `FramelockTheme` in `:app` (colour scheme, typography, shapes); screens read `MaterialTheme` tokens. Only the status colours and the detection class palette are fixed colours, because they carry meaning. Icons are Material Symbols vector drawables (`docs/soup.md`).
 - Bitmaps reused (double buffer): no allocation per frame.
 - `Modifier.track(ElementId)` routes clicks to `TrackUiInteraction`.
 
