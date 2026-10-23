@@ -8,6 +8,7 @@
     <string name="badge_active">Active</string>
     <string name="badge_previous">Previous</string>
     <string name="models_empty">No model installed.</string>
+    <string name="models_empty_hint">Import a signed model package to get started.</string>
     <string name="models_locked">Stop the live session to change models</string>
     <string name="models_busy">Working…</string>
     <string name="model_row_version">Model %1$s</string>
