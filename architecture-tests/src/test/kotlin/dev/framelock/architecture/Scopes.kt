@@ -7,13 +7,19 @@ import org.junit.jupiter.api.Assertions.assertTrue
 internal object Scopes {
     private const val FIXTURES = "architecture-tests/src/test/fixtures"
 
+    /** A hidden directory segment, e.g. a tool cache or a local worktree: never project sources. */
+    private val HIDDEN = Regex("/\\.[^/]+/")
+
     /** Every Kotlin file of the repository, except build-logic and this module (its fixtures break rules on purpose). */
     val project: List<SourceFile> by lazy {
         Konsist
             .scopeFromProject()
             .files
             .map(::SourceFile)
-            .filterNot { it.path.contains("/build-logic/") || it.path.contains("/architecture-tests/") }
+            .filterNot {
+                it.path.contains("/build-logic/") || it.path.contains("/architecture-tests/") ||
+                    HIDDEN.containsMatchIn(it.path)
+            }
     }
 
     /** Production sources of a module given by its directory, e.g. `core/domain`. Fails if empty. */

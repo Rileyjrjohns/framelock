@@ -17,7 +17,8 @@ plugins {
 fun sources(include: String) =
     fileTree(rootDir) {
         include(include)
-        exclude("**/build/**", "**/bin/**", "**/.gradle/**", "**/.kotlin/**")
+        // Hidden directories (tool caches, local worktrees) hold no project sources.
+        exclude("**/build/**", "**/bin/**", ".*/**", "**/.*/**")
         // Fixtures break the architecture rules on purpose (star imports, qualified names): not linted.
         exclude("architecture-tests/src/test/fixtures/**")
     }
