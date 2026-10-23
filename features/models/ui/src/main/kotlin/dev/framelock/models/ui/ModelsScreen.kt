@@ -2,12 +2,16 @@ package dev.framelock.models.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -18,38 +22,34 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import dev.framelock.kernel.model.ModelVersion
 import dev.framelock.kernel.telemetry.ElementId
 import dev.framelock.models.domain.ModelRejectionReason
-
-/** Minimum touch target: usable with gloves and at a glance (docs/architecture.md, "UI"). */
-private val TouchTarget = 64.dp
 
 /** `.flmodel` has no registered media type, so the picker is not narrowed. */
 private val PickerMimeTypes = arrayOf("*/*")
@@ -91,7 +91,11 @@ fun ModelsScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Space the floating top bar and bottom dock take, so the list can scroll clear of them. */
+private val TopBarHeight = 80.dp
+private val DockHeight = 96.dp
+private val Margin = 12.dp
+
 @Composable
 private fun ModelsContent(
     ui: ModelsUiState,
@@ -103,37 +107,65 @@ private fun ModelsContent(
     modifier: Modifier = Modifier,
 ) {
     val enabled = canSwap && !ui.busy
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.models_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onBack, Modifier.size(TouchTarget)) {
-                        Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.action_back))
-                    }
-                },
-            )
-        },
-        bottomBar = { Actions(enabled, ui.canRollBack, onRollback, onImport) },
-    ) { padding ->
-        val status = statusText(ui, canSwap)
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding =
-                PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + 8.dp,
-                ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            status?.let { (text, refused) -> item { StatusCard(text, refused) } }
-            if (ui.rows.isEmpty()) item { EmptyState() }
-            items(ui.rows, key = { it.version.value }) { row ->
-                ModelCard(row, enabled, onActivate = { onActivate(row.version) })
+    val haze = rememberHazeState()
+    val insets = WindowInsets.safeDrawing.asPaddingValues()
+    val status = statusText(ui, canSwap)
+    CompositionLocalProvider(LocalGlassHaze provides haze) {
+        Box(modifier.fillMaxSize().background(BackdropBrush)) {
+            // The list is what the top bar and the dock blur as it scrolls under them.
+            LazyColumn(
+                Modifier
+                    .fillMaxSize()
+                    .hazeSource(
+                        haze,
+                    ).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                contentPadding =
+                    PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = insets.calculateTopPadding() + Margin + TopBarHeight + Margin,
+                        bottom = insets.calculateBottomPadding() + Margin + DockHeight + Margin,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                status?.let { (text, refused) -> item { StatusCard(text, refused) } }
+                if (ui.rows.isEmpty()) item { EmptyState() }
+                items(ui.rows, key = { it.version.value }) { row ->
+                    ModelCard(row, enabled, onActivate = { onActivate(row.version) })
+                }
             }
+            TopBar(onBack, Modifier.align(Alignment.TopCenter))
+            Actions(enabled, ui.canRollBack, onRollback, onImport, Modifier.align(Alignment.BottomCenter))
+        }
+    }
+}
+
+/** A glass bar with the back button and the title, floating over the top of the list. */
+@Composable
+private fun TopBar(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GlassSurface(
+        modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
+            .padding(Margin),
+    ) {
+        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            GlassButton(onBack, Modifier.size(TouchTarget), contentPadding = 0.dp) {
+                Icon(
+                    painterResource(R.drawable.ic_arrow_back),
+                    stringResource(R.string.action_back),
+                    Modifier.size(28.dp),
+                )
+            }
+            Text(
+                stringResource(R.string.models_title),
+                Modifier.padding(start = 16.dp),
+                color = TextPrimary,
+                style = MaterialTheme.typography.titleLarge,
+            )
         }
     }
 }
@@ -155,80 +187,100 @@ private fun StatusCard(
     text: String,
     refused: Boolean,
 ) {
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = if (refused) colors.errorContainer else colors.secondaryContainer,
-        contentColor = if (refused) colors.onErrorContainer else colors.onSecondaryContainer,
-    ) {
-        Text(text, Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+    GlassSurface(Modifier.fillMaxWidth(), blur = false, elevated = false, fill = Tint) {
+        Text(
+            text,
+            Modifier
+                .fillMaxWidth()
+                .background(if (refused) DangerFill else Color.Transparent)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            color = TextPrimary,
+            style = MaterialTheme.typography.bodyLarge,
+        )
     }
 }
 
 @Composable
 private fun EmptyState() {
-    Column(
-        Modifier.fillMaxWidth().padding(vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            painterResource(R.drawable.ic_upload_file),
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(stringResource(R.string.models_empty), style = MaterialTheme.typography.titleLarge)
-        Text(
-            stringResource(R.string.models_empty_hint),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
+    GlassSurface(Modifier.fillMaxWidth(), blur = false, elevated = false, fill = Tint) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_upload_file),
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .size(48.dp)
+                        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(AccentBrush, blendMode = BlendMode.SrcIn)
+                        },
+                tint = Color.White,
+            )
+            Text(
+                stringResource(R.string.models_empty),
+                color = TextPrimary,
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Text(
+                stringResource(R.string.models_empty_hint),
+                color = TextSecondary,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
-/** Import and roll back, always in reach at the bottom. */
+/** Roll back (glass) and import (gradient), always in reach in a dock at the bottom. */
 @Composable
 private fun Actions(
     enabled: Boolean,
     canRollBack: Boolean,
     onRollback: () -> Unit,
     onImport: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-        Row(
-            Modifier
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
-                ).padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            FilledTonalButton(
+    GlassSurface(
+        modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+            .padding(Margin),
+    ) {
+        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GlassButton(
                 onClick = onRollback,
                 modifier = Modifier.weight(1f).heightIn(min = TouchTarget),
                 enabled = enabled && canRollBack,
-                shape = MaterialTheme.shapes.large,
             ) {
-                Icon(painterResource(R.drawable.ic_undo), contentDescription = null)
+                Icon(painterResource(R.drawable.ic_undo), contentDescription = null, modifier = Modifier.size(24.dp))
                 Text(
                     stringResource(R.string.action_rollback),
                     Modifier.padding(start = 8.dp),
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
                 )
             }
-            Button(
+            GlassButton(
                 onClick = onImport,
                 modifier = Modifier.weight(1f).heightIn(min = TouchTarget),
                 enabled = enabled,
-                shape = MaterialTheme.shapes.large,
+                look = ButtonLook.Accent,
             ) {
-                Icon(painterResource(R.drawable.ic_upload_file), contentDescription = null)
+                Icon(
+                    painterResource(R.drawable.ic_upload_file),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
                 Text(
                     stringResource(R.string.action_import),
                     Modifier.padding(start = 8.dp),
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
                 )
             }
         }
@@ -274,54 +326,36 @@ private fun ModelCard(
     enabled: Boolean,
     onActivate: () -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors =
-            CardDefaults.cardColors(
-                containerColor = if (row.active) colors.surfaceContainerHigh else colors.surfaceContainer,
-            ),
-    ) {
+    GlassSurface(Modifier.fillMaxWidth(), blur = false, elevated = false, fill = Tint) {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = TouchTarget).padding(16.dp),
+            Modifier.fillMaxWidth().heightIn(min = TouchTarget).padding(20.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     stringResource(R.string.model_row_version, row.version.value),
+                    color = TextPrimary,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
                 )
                 if (row.active || row.previous) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (row.active) {
-                            StatusChip(
-                                stringResource(R.string.badge_active),
-                                R.drawable.ic_check_circle,
-                                colors.primaryContainer,
-                                colors.onPrimaryContainer,
-                            )
+                            StatusChip(stringResource(R.string.badge_active), R.drawable.ic_check_circle, active = true)
                         }
                         if (row.previous) {
-                            StatusChip(
-                                stringResource(R.string.badge_previous),
-                                R.drawable.ic_history,
-                                colors.secondaryContainer,
-                                colors.onSecondaryContainer,
-                            )
+                            StatusChip(stringResource(R.string.badge_previous), R.drawable.ic_history, active = false)
                         }
                     }
                 }
             }
             if (!row.active) {
-                FilledTonalButton(
+                GlassButton(
                     onActivate,
                     Modifier.heightIn(min = TouchTarget),
                     enabled = enabled,
-                    shape = MaterialTheme.shapes.large,
-                    colors = ButtonDefaults.filledTonalButtonColors(),
+                    look = ButtonLook.Accent,
+                    contentPadding = 24.dp,
                 ) {
                     Text(stringResource(R.string.action_activate), style = MaterialTheme.typography.titleMedium)
                 }
@@ -330,22 +364,29 @@ private fun ModelCard(
     }
 }
 
+/** "Active" has the gradient for its edge, "Previous" the plain glass one. */
 @Composable
 private fun StatusChip(
     text: String,
     icon: Int,
-    container: Color,
-    content: Color,
+    active: Boolean,
 ) {
-    Surface(shape = MaterialTheme.shapes.small, color = container, contentColor = content) {
-        Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-        }
+    Row(
+        Modifier
+            .clip(CircleShape)
+            .background(Tint)
+            .border(if (active) 1.5.dp else 1.dp, if (active) AccentBrush else SolidColor(Edge), CircleShape)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painterResource(icon),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = if (active) AccentCyan else TextSecondary,
+        )
+        Text(text, color = TextPrimary, style = MaterialTheme.typography.labelLarge)
     }
 }
 
