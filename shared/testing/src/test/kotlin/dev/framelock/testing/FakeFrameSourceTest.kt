@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalCoroutinesApi::class)
+
 package dev.framelock.testing
 
 import dev.framelock.live.domain.frame.DisconnectReason
@@ -7,6 +9,7 @@ import dev.framelock.live.domain.frame.SessionId
 import dev.framelock.live.domain.frame.StreamSpec
 import dev.framelock.live.domain.frame.TimestampSource
 import dev.framelock.live.domain.port.SourceEvent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch

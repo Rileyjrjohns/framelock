@@ -1,8 +1,11 @@
+@file:OptIn(ExperimentalCoroutinesApi::class)
+
 package dev.framelock.testing
 
 import dev.framelock.live.domain.system.DeviceSnapshot
 import dev.framelock.live.domain.system.MemoryPressure
 import dev.framelock.live.domain.system.ThermalLevel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
