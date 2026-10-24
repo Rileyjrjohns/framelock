@@ -39,6 +39,7 @@ class ModuleRoleTest {
         const val LIVE_DOMAIN = ":features:live:domain"
         const val LIVE_APPLICATION = ":features:live:application"
         const val LIVE_UVC = ":features:live:capture-uvc"
+        const val LIVE_FILE = ":features:live:capture-file"
         const val LIVE_SYSTEM = ":features:live:system"
         const val LIVE_UI = ":features:live:ui"
         const val MODELS_DOMAIN = ":features:models:domain"
@@ -58,6 +59,7 @@ class ModuleRoleTest {
                 LIVE_DOMAIN,
                 LIVE_APPLICATION,
                 LIVE_UVC,
+                LIVE_FILE,
                 LIVE_SYSTEM,
                 LIVE_UI,
                 MODELS_DOMAIN,
@@ -79,6 +81,7 @@ class ModuleRoleTest {
                 LIVE_DOMAIN to setOf(KERNEL),
                 LIVE_APPLICATION to setOf(KERNEL, LIVE_DOMAIN),
                 LIVE_UVC to setOf(KERNEL, LIVE_DOMAIN),
+                LIVE_FILE to setOf(KERNEL, LIVE_DOMAIN),
                 LIVE_SYSTEM to setOf(KERNEL, LIVE_DOMAIN),
                 LIVE_UI to setOf(KERNEL, LIVE_DOMAIN, LIVE_APPLICATION),
                 MODELS_DOMAIN to setOf(KERNEL, LIVE_DOMAIN),

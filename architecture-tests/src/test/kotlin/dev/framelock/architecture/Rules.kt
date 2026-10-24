@@ -20,6 +20,7 @@ internal object Rules {
             "features/live/application",
             "features/live/capture-uvc",
             "features/live/capture-camerax",
+            "features/live/capture-file",
             "features/live/inference-litert",
             "features/live/system",
             "features/live/ui",
