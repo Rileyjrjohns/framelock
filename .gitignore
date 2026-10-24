@@ -33,6 +33,10 @@ signing.properties
 keys/
 !app/src/main/assets/keys/
 
+# Performance runs (M7): traces are large and stay local; the input video is never committed (scripts/perf/)
+*.perfetto-trace
+*.mp4
+
 # Model binaries are downloaded and signed locally, not committed (app/src/debug/assets/{models,keys})
 *.tflite
 *.flmodel
