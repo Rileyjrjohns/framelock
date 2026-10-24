@@ -18,6 +18,7 @@ Gradle tests are in `build-logic/boundaries` (`ModuleBoundariesPluginTest`), Kon
 | ARCH-5 | Architecture rules never pass on an empty scope, and skip only root-level hidden directories | Konsist: every module scope is non-empty; each fixture test; fixture: hidden directories are skipped only at the repository root | covered |
 | PIPE-1a | No `limitedParallelism` in pure modules (ADR-002) | Konsist: pure modules do not use limitedParallelism; fixture: limitedParallelism is caught in any pure module, not in comments or strings | covered |
 | CI-1 | Build, unit tests, ktlint, detekt, Konsist on push to `main` and on pull requests | `.github/workflows/ci.yml` (green on M0: GitHub Actions run 39921498870) | covered for M0; M1 runs on its first push |
+| CI-2 | Release APK as an artifact on tag `v*`, signed from repository secrets when present, never from the repository | `.github/workflows/release.yml`, `app/build.gradle.kts` (signing from environment); signed and unsigned `assembleRelease` checked locally, `apksigner verify` (2026-10-24); first tag run not yet done | implemented, CI run pending |
 
 ## Core (M1)
 

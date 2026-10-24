@@ -5,7 +5,7 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 drawn on the exact frame it was computed from.
 
 > Status: **M7, performance pass: three measured optimisations.** End-to-end latency 1.13 s → 119 ms and 2.6 → 14.3
-> analyses per second on a fixed 1080p input: see [docs/perf/results.md](docs/perf/results.md). Release APK on tag: pending.
+> analyses per second on a fixed 1080p input: see [docs/perf/results.md](docs/perf/results.md). Release APK built by CI on tags `v*`.
 >
 > Before that, **M6, telemetry.** Accepted events are stored in a capped Room table and uploaded in gzipped JSON batches by WorkManager; the default uploader only logs ([ADR-004](docs/adr/ADR-004-typed-telemetry.md), amendment M6).
 >
@@ -66,6 +66,20 @@ signal* and the app retries. The chosen capture mode (format, size, rate) is log
 A phone usually has a single USB-C port, which the card takes, so `adb` over USB is not available. Use wireless
 debugging instead: *Developer options → Wireless debugging → Pair device with pairing code*, then
 `adb pair <host:port>` and `adb connect <host:port>`; `./gradlew installDebug` and `adb logcat` work over that link.
+
+### Release APK (on tag)
+
+Pushing a tag `v*` runs `.github/workflows/release.yml`: `check`, then `assembleRelease`, uploaded as a workflow
+artifact. The APK is signed when the repository has these secrets, otherwise it is unsigned:
+
+| Secret | Content |
+|---|---|
+| `FRAMELOCK_KEYSTORE_BASE64` | the release keystore, `base64 -i release.jks` |
+| `FRAMELOCK_KEYSTORE_PASSWORD`, `FRAMELOCK_KEY_ALIAS`, `FRAMELOCK_KEY_PASSWORD` | its passwords and key alias |
+
+Locally, the same variables (`FRAMELOCK_KEYSTORE` = path of the keystore) sign `./gradlew assembleRelease`. Keystores
+never go in the repository. A release build bundles no model and trusts only the public keys in
+`app/src/main/assets/keys/`: add a release model-signing key there first (see "Models"), or it refuses every import.
 
 ### Performance runs (debug)
 
