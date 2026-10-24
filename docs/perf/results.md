@@ -18,6 +18,7 @@ here. The numbers come from `scripts/perf/run.sh`; each row links to its run dir
 
 | Run | Date | Device | Backend | Change | Inference p50 / p95 (ms) | E2E p50 / p95 (ms) | Input fps | Inference fps | Drops | CPU % | PSS (MB) | Temp. start → end (°C) | Trace |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [baseline](runs/baseline/summary.md) | 2026-10-24 | test phone, Android 16 | GPU | debug build, GPU auto, file source 1080p30, USB powered | 55.9 / 76.3 | 1130.1 / 1408.0 | 4.2 | 2.6 | 892 | 185 | 400 | 28.7 → 31.8 (skin 33.0 → 36.9) | `runs/baseline/baseline.perfetto-trace` (local) |
 
 ## Input video
 
