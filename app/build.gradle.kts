@@ -9,6 +9,21 @@ android {
         versionCode = 1
         versionName = "0.1.0"
     }
+
+    // Release signing comes from the environment (CI secrets or a local shell), never from the repository. Without it,
+    // assembleRelease produces an unsigned APK.
+    val keystore = providers.environmentVariable("FRAMELOCK_KEYSTORE").orNull
+    if (keystore != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystore)
+                storePassword = providers.environmentVariable("FRAMELOCK_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("FRAMELOCK_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("FRAMELOCK_KEY_PASSWORD").get()
+            }
+        }
+        buildTypes.getByName("release").signingConfig = signingConfigs.getByName("release")
+    }
 }
 
 dependencies {
