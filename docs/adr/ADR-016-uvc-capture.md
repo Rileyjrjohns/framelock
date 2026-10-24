@@ -5,7 +5,7 @@
 
 ## Context
 
-M3 adds the capture card as a source. The test device (Galaxy A33, Android 16) has `android.hardware.usb.host` but
+M3 adds the capture card as a source. The test device (a mid-range phone on Android 16) has `android.hardware.usb.host` but
 not `android.hardware.camera.external`, so Camera2 does not expose the card there: it must be driven through a UVC
 library. Several choices depend on what that library does, which was read in its source and checked against the
 1.0.13 binary.
@@ -103,7 +103,7 @@ library. Several choices depend on what that library does, which was read in its
 
 ## Measured on a device (2026-10-23)
 
-USB webcam (a UVC device, same code path as a capture card) on a Galaxy A33, Android 16, with the debug build:
+USB webcam (a UVC device, same code path as a capture card) on the test phone (mid-range, Android 16), with the debug build:
 
 | | USB webcam (UVC) | Back camera (CameraX) |
 |---|---|---|

@@ -23,6 +23,7 @@ One file per decision: context, decision, consequences. A decision changes only 
 | [017](ADR-017-system-adapters.md) | System adapters (M4): thermal headroom and memory pressure | Accepted |
 
 Amended in M1: ADR-003 (model and audit ports, swap lock), ADR-004 (telemetry string fields, events, windows).
+Amended in M7: ADR-014 (capture-file, a debug/benchmark FrameSource), ADR-009 (RENDER section owner), ADR-005 (debug backend override).
 
 ## Template
 

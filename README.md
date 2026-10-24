@@ -4,7 +4,9 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 (HDMI → USB) or from the device camera; a detection model runs on each analysed frame, and the result is
 drawn on the exact frame it was computed from.
 
-> Status: **M6, telemetry.** Accepted events are stored in a capped Room table and uploaded in gzipped JSON batches by WorkManager; the default uploader only logs ([ADR-004](docs/adr/ADR-004-typed-telemetry.md), amendment M6).
+> Status: **M7, performance pass, step 1: measurement tooling.** A fixed input video played by a debug source and a scripted 10-minute run with a Perfetto trace and a results table: see [docs/perf/README.md](docs/perf/README.md). No optimisation yet, no baseline recorded.
+>
+> Before that, **M6, telemetry.** Accepted events are stored in a capped Room table and uploaded in gzipped JSON batches by WorkManager; the default uploader only logs ([ADR-004](docs/adr/ADR-004-typed-telemetry.md), amendment M6).
 >
 > Before that, **M5, model store.** Models are imported from signed `.flmodel` packages (ECDSA P-256 over a manifest that covers the model and its labels), activated and rolled back from a Models screen, with an audit trail ([ADR-003](docs/adr/ADR-003-signed-models-outside-apk.md), amendment M5).
 >
@@ -63,6 +65,18 @@ signal* and the app retries. The chosen capture mode (format, size, rate) is log
 A phone usually has a single USB-C port, which the card takes, so `adb` over USB is not available. Use wireless
 debugging instead: *Developer options → Wireless debugging → Pair device with pairing code*, then
 `adb pair <host:port>` and `adb connect <host:port>`; `./gradlew installDebug` and `adb logcat` work over that link.
+
+### Performance runs (debug)
+
+A debug build can play a fixed video in a loop instead of a camera and be driven by a script, to take repeatable
+measurements (inference and end-to-end latency, CPU, memory, temperature, a Perfetto trace):
+
+```bash
+./scripts/perf/fetch-input.sh            # downloads the video, checks its SHA-256, pushes it to the debug app
+./scripts/perf/run.sh baseline-gpu 600   # one 10-minute run; writes docs/perf/runs/baseline-gpu/ and a row in docs/perf/results.md
+```
+
+Details, conditions to hold constant and how to read a trace: [docs/perf/README.md](docs/perf/README.md).
 
 ### Degradation (debug)
 

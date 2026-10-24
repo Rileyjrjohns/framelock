@@ -124,6 +124,19 @@ Apache-2.0, with the `tint` and `autoMirrored` attributes dropped: `live:ui` has
 [the Compose documentation](https://developer.android.com/develop/ui/compose/graphics/images/material) says the
 artifact "is no longer maintained or recommended for use in your apps", and recommends Material Symbols as XML.
 
+### Measurement material, M7 (not shipped)
+
+Used by `scripts/perf/` only; none of it is in the APK or a Gradle dependency (no new library).
+
+| Component | Version | Purpose | Licence |
+|---|---|---|---|
+| `classroom.mp4` from `intel-iot-devkit/sample-videos` (<https://github.com/intel-iot-devkit/sample-videos>), commit `57978890822836f2b4743852f04f62fc511757e4`, SHA-256 `a69bd5e39ff0e74286d13bcbfdadddd307b85decd2d9853db7518e0028785e31` | 1920x1080, H.264 High, 30 fps, 32.8 s, no audio | The fixed input video of the performance runs (people, chairs, tables: COCO classes). Downloaded by `scripts/perf/fetch-input.sh`, never committed | CC BY 4.0 (the repository's licence, read from its `LICENSE` file and the GitHub API, 2026-10-24). Attribution: "classroom.mp4, sample-videos, Intel Corporation, CC BY 4.0, unmodified". Unverified: the repository does not say where the clip was first published, so the licence is the repository owner's grant, taken at face value |
+| Perfetto (on the device: `perfetto`, `traced`; on the host: the UI at <https://ui.perfetto.dev>, optionally `trace_processor_shell`) | the device's own build; host tool as the user installed it | System trace of a run (CPU frequencies, scheduling, GPU, thermal, app sections). `trace_processor_shell` is used by `summarize.py` only when it is on PATH; nothing is downloaded | Apache-2.0 |
+| Android platform tools (`adb`) | the user's | Drives a run | Apache-2.0 |
+
+The Benchmark and Baseline Profile libraries listed under "Planned" are not added by this step; they belong to the
+optimisation steps that need them.
+
 ## Tests only
 
 | Component | Version | Purpose | Licence |
@@ -159,4 +172,4 @@ Recorded with their milestone so licences are reviewed before code depends on th
 
 | Component | Version | Milestone | Licence |
 |---|---|---|---|
-| Benchmark, Baseline Profile plugin, ProfileInstaller (direct; 1.4.0 already ships transitively), UI Automator | 1.5.0 / 1.4.1 / 2.4.0 | M7 | Apache-2.0 |
+| Benchmark, Baseline Profile plugin, ProfileInstaller (direct; 1.4.0 already ships transitively), UI Automator | 1.5.0 / 1.4.1 / 2.4.0 (to re-check against the official release notes before use) | M7, if a later step needs them | Apache-2.0 |

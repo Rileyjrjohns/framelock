@@ -23,6 +23,7 @@ Modules are grouped by feature, and each feature keeps the hexagonal layers as s
 :features:live:application      pure Kotlin — InferencePipeline, MetricsAggregator, Start/Stop/Observe/ReportFrameRendered
 :features:live:capture-uvc      adapter
 :features:live:capture-camerax  adapter
+:features:live:capture-file     adapter (debug/benchmark FrameSource, M7)
 :features:live:inference-litert adapter
 :features:live:system           adapter (thermal, memory, device info, tracing, clock)
 :features:live:ui               Compose live screen and HUD
@@ -71,3 +72,17 @@ or `dev.framelock.kernel.port`.
 - `ModelSwapPolicy` sits in `models:domain` and reads the live feature's `PipelineState`: allowed, since models is
   downstream of live.
 - `architecture.md` "Modules" and ADR-006 describe this layout from now on.
+
+### Amendment (2026-10-24, M7): capture-file, a debug/benchmark FrameSource
+
+The performance pass needs the same pixels at the same rate on every run, which no camera gives. A new adapter,
+`:features:live:capture-file` (`dev.framelock.live.capture.file`), implements `FrameSource` over an H.264 MP4 played in
+real time and in a loop (`MediaExtractor` + `MediaCodec`). It is an adapter like the others: it reaches the kernel and
+`live:domain` only, so the reach table above is unchanged (`ModuleRoleTest` pins the new row). It keeps a minimal copy of
+the I420 pool of `capture-camerax` rather than depending on it: adapters never depend on each other.
+
+`:app` offers it as a "Test video" source in debug builds only, when `filesDir/perf/input.mp4` exists, and never
+chooses it automatically. The module is part of the release build's classpath (the dependency is the same for every
+variant); a release build never instantiates the source, offers no such option and ignores the debug launch extras
+(`DebugLaunch`). Splitting it into a debug-only dependency would need a debug source set for `AppGraph`, which was not
+worth it for one class.

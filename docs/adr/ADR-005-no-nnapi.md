@@ -21,3 +21,11 @@ NNAPI is deprecated since Android 15. LiteRT ships two Android APIs: the `Interp
 - 1.4.2 is in maintenance mode. The 2.x `CompiledModel` API is a candidate for the M7 performance pass, measured
   against this baseline.
 - GPU is not assumed faster: for small int8 models a multi-thread CPU run can win. The choice is measured on device.
+
+### Amendment (2026-10-24, M7)
+
+To measure that choice, the engine takes a `BackendPreference` (`AUTO`, `GPU`, `CPU`), read at each load. `AUTO` is the
+behaviour above and the only one a release build uses; `GPU` and `CPU` are reachable only through the debug launch
+extras (`--es backend gpu|cpu`). A forced `GPU` that cannot be built fails the load rather than falling back, so a
+benchmark never measures the other backend unnoticed. The backend actually used is logged once per load (tag
+`LiteRtEngine`) and shown in the debug HUD. NNAPI is still not used.

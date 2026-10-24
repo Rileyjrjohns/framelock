@@ -22,3 +22,9 @@ typos and unbounded cardinality.
 
 The androidx.tracing implementation lives in `:features:live:system` (M4). Sections that cross threads (render) use async
 sections there, behind the same port.
+
+### Amendment (2026-10-24, M7)
+
+`RENDER` is traced by `FrameRenderer` in `:features:live:ui`, which receives the `Tracer` port from `:app` (the UI module
+may reach the kernel). It wraps the I420 to ARGB conversion and the bitmap upload; both run on the main thread, so a
+plain section is enough and no async section was needed.

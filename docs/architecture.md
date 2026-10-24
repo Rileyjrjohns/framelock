@@ -21,7 +21,7 @@ flowchart LR
   subgraph live [feature: live]
     LD[domain<br/>Frame · policies · ports]
     LA[application<br/>InferencePipeline · metrics · use cases]
-    LAD[capture-uvc · capture-camerax<br/>inference-litert · system]
+    LAD[capture-uvc · capture-camerax · capture-file<br/>inference-litert · system]
     LUI[ui]
     LA --> LD
     LAD --> LD
@@ -59,6 +59,7 @@ flowchart LR
 :features:live:application      pure Kotlin — InferencePipeline, MetricsAggregator, Start/Stop/Observe/ReportFrameRendered
 :features:live:capture-uvc      FrameSource over a USB/UVC capture card (UVCAndroid, ADR-016)
 :features:live:capture-camerax  FrameSource over CameraX (fallback, works without hardware)
+:features:live:capture-file     FrameSource over an H.264 MP4 played in a loop (debug/benchmark, M7; ADR-014 amendment)
 :features:live:inference-litert InferenceEngine over LiteRT (GPU delegate, CPU/XNNPACK fallback)
 :features:live:system           ThermalMonitor (status + headroom), MemoryPressureMonitor (trim + MemoryInfo), DeviceInfoProvider, Clock, Tracer (ADR-017)
 :features:live:ui               live screen with synchronized overlay, debug HUD
@@ -243,6 +244,7 @@ Each requirement links to its tests in `docs/traceability.md`.
 
 1. Baseline: Perfetto system trace (CPU frequencies, GPU, thermal), memory profiler, 10-minute run on a fixed input video.
 2. One change at a time, re-traced, logged in `docs/perf/results.md` (before/after: inference p50/p95, e2e p50/p95, CPU %, PSS, temperature after 10 minutes).
+   The tooling (M7, step 1) is in `scripts/perf/` and described in `docs/perf/README.md`: a fixed input video played by `capture-file`, a scripted run (`run.sh`) with a cool-down gate, a Perfetto trace, and a summary row in `results.md`.
 3. Candidates: GPU delegate vs CPU, input resolution, zero-copy YUV → tensor, MJPEG decoding cost from the capture card, inference rate cap, buffer pooling.
 
 ## Delivery
