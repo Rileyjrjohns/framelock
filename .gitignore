@@ -34,6 +34,9 @@ keys/
 !app/src/main/assets/keys/
 
 # Performance runs (M7): traces are large and stay local; the input video is never committed (scripts/perf/)
+# Only each run's summary is committed: raw files hold the device serial and model.
+docs/perf/runs/*/*
+!docs/perf/runs/*/summary.md
 *.perfetto-trace
 *.mp4
 

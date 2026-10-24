@@ -34,7 +34,8 @@
 set -euo pipefail
 
 PACKAGE="dev.framelock"
-ACTIVITY="$PACKAGE/.MainActivity"
+# The application id (dev.framelock) differs from the Kotlin namespace of the activity (dev.framelock.app).
+ACTIVITY="$PACKAGE/dev.framelock.app.MainActivity"
 INPUT_REL="files/perf/input.mp4"
 SAMPLE_INTERVAL=10
 TEMP_EVERY=6           # samples between two battery temperature readings (one per minute)
@@ -143,9 +144,12 @@ perfetto_config() {
 duration_ms: $duration_ms
 write_into_file: true
 file_write_period_ms: 5000
+# With write_into_file the buffers are drained to the file periodically: RING_BUFFER and a flush period are what
+# trace_processor expects (DISCARD can lose data, and no flush keeps everything in memory).
+flush_period_ms: 10000
 max_file_size_bytes: 1073741824
-buffers { size_kb: 65536 fill_policy: DISCARD }
-buffers { size_kb: 16384 fill_policy: DISCARD }
+buffers { size_kb: 65536 fill_policy: RING_BUFFER }
+buffers { size_kb: 16384 fill_policy: RING_BUFFER }
 
 data_sources {
   config {
@@ -244,6 +248,7 @@ launch_args=(-e source file --ez autostart true --ez hud true)
 [[ -n "$backend" ]] && launch_args+=(-e backend "$backend")
 log "Launching: am start ${launch_args[*]}"
 adb shell am start -W -n "$ACTIVITY" "${launch_args[@]}" > "$run_dir/am-start.txt"
+grep -q "^Error" "$run_dir/am-start.txt" && die "launch failed: $(grep "^Error" "$run_dir/am-start.txt" | tail -1)"
 launch_uptime="$(uptime_s)"
 
 pid=""
@@ -319,6 +324,8 @@ fi
   echo "note=${note:-$label}"
   echo "backend_requested=${backend:-auto}"
   echo "serial=${ANDROID_SERIAL:-$(adb get-serialno | tr -d '\r')}"
+  # Committed summaries name the device by this label only (no product names in the docs); the raw meta stays local.
+  echo "device_label=${FRAMELOCK_DEVICE_LABEL:-test phone}"
   echo "device_model=$(dev getprop ro.product.model)"
   echo "device_soc=$(dev getprop ro.soc.model)"
   echo "android_release=$(dev getprop ro.build.version.release)"

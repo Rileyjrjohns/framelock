@@ -411,7 +411,7 @@ def results_row(label, s):
     cells = [
         "[%s](runs/%s/summary.md)" % (label, label),
         meta.get("date_utc", "–")[:10],
-        "%s, Android %s" % (meta.get("device_model", "–"), meta.get("android_release", "–")),
+        "%s, Android %s" % (meta.get("device_label", "test phone"), meta.get("android_release", "–")),
         s["backend"] or "–",
         meta.get("note", label),
         pair(*s["inference"]),
@@ -433,7 +433,7 @@ def summary_markdown(label, s, warmup):
         "# Run %s" % label,
         "",
         "%s on %s (Android %s, SDK %s), app %s, commit %s." % (
-            meta.get("date_utc", "–"), meta.get("device_model", "–"), meta.get("android_release", "–"),
+            meta.get("date_utc", "–"), meta.get("device_label", "test phone"), meta.get("android_release", "–"),
             meta.get("android_sdk", "–"), meta.get("app_version", "–"), meta.get("git_commit", "–")),
         "",
         "- Change: %s" % meta.get("note", label),
