@@ -100,8 +100,11 @@ class FakeInferenceEngine(
         inferred += frame.sessionId.value to frame.id.value
         maxRunning.accumulateAndGet(running.incrementAndGet()) { a, b -> maxOf(a, b) }
         try {
+            // Claimed before onInfer: a test that waits for onInfer and then calls infer() again must not see that
+            // second call take the latch meant for this one.
+            val blocker = infersBlocker.getAndSet(null)
             onInfer(frame)
-            infersBlocker.getAndSet(null)?.let(::awaitRelease)
+            blocker?.let(::awaitRelease)
             check(!failInferWhen(frame)) { "infer failed for $frame" }
             return resultFor(frame)
         } finally {
