@@ -16,6 +16,7 @@ dependencies {
     implementation(projects.features.live.application)
     implementation(projects.features.live.captureUvc)
     implementation(projects.features.live.captureCamerax)
+    implementation(projects.features.live.captureFile)
     implementation(projects.features.live.inferenceLitert)
     implementation(projects.features.live.system)
     implementation(projects.features.live.ui)

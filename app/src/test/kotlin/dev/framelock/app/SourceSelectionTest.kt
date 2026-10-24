@@ -41,6 +41,23 @@ class SourceSelectionTest {
     }
 
     @Test
+    fun `the test video is listed last, only when present`() {
+        val without = buildSourceOptions(labels, hasBack = true, hasFront = false, hasExternal = false, listOf(webcam))
+        val with =
+            buildSourceOptions(
+                labels,
+                hasBack = true,
+                hasFront = false,
+                hasExternal = false,
+                uvcDevices = listOf(webcam),
+                hasTestVideo = true,
+            )
+
+        assertEquals(without + SourceOption("file", "Test video"), with)
+        assertEquals(SourceChoice.File, choiceOf("file"))
+    }
+
+    @Test
     fun `absent cameras are not listed`() {
         val options = buildSourceOptions(labels, hasBack = false, hasFront = false, hasExternal = false, emptyList())
 

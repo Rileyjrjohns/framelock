@@ -17,11 +17,13 @@ import dev.framelock.live.application.usecase.StopPipeline
 import dev.framelock.live.capture.camerax.CameraFacing
 import dev.framelock.live.capture.camerax.CameraXCameras
 import dev.framelock.live.capture.camerax.CameraXFrameSource
+import dev.framelock.live.capture.file.VideoFileFrameSource
 import dev.framelock.live.capture.uvc.UvcDevices
 import dev.framelock.live.capture.uvc.UvcFrameSource
 import dev.framelock.live.domain.frame.SessionIdSequence
 import dev.framelock.live.domain.policy.ReconnectConfig
 import dev.framelock.live.domain.policy.ReconnectPolicy
+import dev.framelock.live.inference.litert.BackendPreference
 import dev.framelock.live.inference.litert.LiteRtInferenceEngine
 import dev.framelock.live.system.AndroidClock
 import dev.framelock.live.system.AndroidDeviceInfoProvider
@@ -57,12 +59,15 @@ import dev.framelock.telemetry.room.TelemetryWorkerFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
 import java.io.InputStream
 import java.time.Duration
 import kotlin.random.Random
@@ -81,7 +86,10 @@ class AppGraph(
     private val tracer = AndroidTracer()
 
     private val appContext = context.applicationContext
-    private val debuggable = appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+    val debuggable = appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+
+    /** The looping test video of the M7 measurements (`scripts/perf/`); debug builds only, and only when present. */
+    private val testVideo = File(appContext.filesDir, TEST_VIDEO_PATH)
 
     // Telemetry (ADR-004, M6): a capped Room buffer written off the caller's thread, uploaded in batches by WorkManager.
     private val telemetryBuffer =
@@ -136,6 +144,7 @@ class AppGraph(
                 hasFront = CameraXCameras.has(appContext, CameraFacing.FRONT),
                 hasExternal = CameraXCameras.has(appContext, CameraFacing.EXTERNAL),
                 uvcDevices = UvcDevices.list(appContext),
+                hasTestVideo = debuggable && testVideo.isFile,
             )
         }
     private val uvcSource =
@@ -152,6 +161,7 @@ class AppGraph(
             uvc = uvcSource,
             back = CameraXFrameSource(appContext, clock, tracer, sessionIds),
             front = CameraXFrameSource(appContext, clock, tracer, sessionIds, facing = CameraFacing.FRONT),
+            file = if (debuggable) VideoFileFrameSource(testVideo, clock, tracer, sessionIds) else null,
             choice = { sourceSelection.choice },
             hasExternalCamera = { CameraXCameras.has(appContext, CameraFacing.EXTERNAL) },
             hasUvcDevice = { UvcDevices.isAttached(appContext) },
@@ -163,10 +173,16 @@ class AppGraph(
     // The pipeline and the debug HUD share one subscription to each monitor (and so one headroom poller).
     private val thermal = SharedThermalMonitor(PowerManagerThermalMonitor(appContext), scope)
     private val memory = SharedMemoryPressureMonitor(AndroidMemoryPressureMonitor(appContext, clock), scope)
+
+    // Debug automation can force a backend (`DebugLaunch`); read by the engine at each load. Auto in release builds.
+    @Volatile private var backendOverride = BackendPreference.AUTO
+    private val engine = LiteRtInferenceEngine(tracer, preference = { backendOverride })
+    private val backendLabel: StateFlow<String?> =
+        engine.backend.map { it?.name }.stateIn(scope, SharingStarted.Eagerly, null)
     private val pipeline =
         InferencePipeline(
             source = source,
-            engine = LiteRtInferenceEngine(tracer),
+            engine = engine,
             thermal = thermal,
             memory = memory,
             clock = clock,
@@ -270,7 +286,34 @@ class AppGraph(
         return result
     }
 
-    fun liveViewModel(): LiveViewModel =
+    /**
+     * Applies the extras of a debug launch (`DebugLaunch`): the backend, the source, then, once a model is active,
+     * [start]. Does nothing in a release build. Called once per launch, from the activity.
+     */
+    fun applyDebugLaunch(
+        launch: DebugLaunch,
+        start: () -> Unit,
+    ) {
+        if (!debuggable || !launch.isActive) return
+        scope.launch(Dispatchers.IO) {
+            launch.backend?.let { backendOverride = it }
+            launch.sourceId?.let { id ->
+                sourceSelection.options()
+                sourceSelection.select(id)
+                if (sourceSelection.current.value.id != id) Log.w(TAG, "Debug launch: source '$id' is not available")
+            }
+            if (launch.autostart) {
+                val ready = withTimeoutOrNull(MODEL_WAIT) { while (modelRepository.active() == null) delay(MODEL_POLL) }
+                if (ready == null) {
+                    Log.w(TAG, "Debug launch: no active model after $MODEL_WAIT, not starting")
+                } else {
+                    withContext(Dispatchers.Main) { start() }
+                }
+            }
+        }
+    }
+
+    fun liveViewModel(hudVisibleAtStart: Boolean = false): LiveViewModel =
         LiveViewModel(
             observe = observe,
             start = start,
@@ -278,6 +321,7 @@ class AppGraph(
             reportRendered = reportRendered,
             display = pipeline.display,
             clock = clock,
+            tracer = tracer,
             labelOf = activeLabels::labelOf,
             track = { trackUi(it) },
             listSources = sourceSelection::options,
@@ -286,6 +330,8 @@ class AppGraph(
             sourceDescription = source.activeDescription,
             thermal = thermal.state,
             memory = memory.state,
+            backend = backendLabel,
+            hudVisibleAtStart = hudVisibleAtStart,
         )
 
     fun modelsViewModel(): ModelsViewModel =
@@ -306,6 +352,11 @@ class AppGraph(
         val DEBUG_UPLOAD_DELAY: Duration = Duration.ofSeconds(20)
         const val BUNDLED_DIRECTORY = "models"
         const val PACKAGE_SUFFIX = ".flmodel"
+
+        /** Under `filesDir`: where `scripts/perf/fetch-input.sh` puts the test video. */
+        const val TEST_VIDEO_PATH = "perf/input.mp4"
+        val MODEL_WAIT = 60.seconds
+        val MODEL_POLL = 200.milliseconds
         val RECONNECT_BASE = 500.milliseconds
         val RECONNECT_MAX = 10.seconds
         const val RECONNECT_JITTER = 0.2

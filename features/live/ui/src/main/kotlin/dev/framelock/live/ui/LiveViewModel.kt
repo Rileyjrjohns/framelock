@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.framelock.kernel.port.Clock
+import dev.framelock.kernel.port.Tracer
 import dev.framelock.kernel.telemetry.ElementId
 import dev.framelock.live.application.metrics.LiveMetrics
 import dev.framelock.live.application.pipeline.AnnotatedFrame
@@ -30,6 +31,7 @@ class LiveViewModel(
     private val reportRendered: ReportFrameRendered,
     display: DisplaySlot,
     private val clock: Clock,
+    tracer: Tracer,
     /** Label names of the active model, for the overlay. */
     val labelOf: (LabelId) -> String,
     /** Wired in `:app` to `TrackUiInteraction` (ADR-004). */
@@ -45,11 +47,15 @@ class LiveViewModel(
     /** The levels the pipeline degrades on, for the debug HUD (ADR-013, ADR-017). */
     val thermal: StateFlow<ThermalLevel>,
     val memory: StateFlow<MemoryPressure>,
+    /** The inference backend in use (`GPU` or `CPU`), for the debug HUD; null until a model is loaded. UI text only. */
+    val backend: StateFlow<String?>,
+    /** Shows the HUD from the start (debug automation); the HUD button still toggles it. */
+    hudVisibleAtStart: Boolean = false,
 ) : ViewModel() {
     val state: StateFlow<PipelineUiState> = observe.state
     val live: StateFlow<LiveMetrics> = observe.live
 
-    private val hud = MutableStateFlow(false)
+    private val hud = MutableStateFlow(hudVisibleAtStart)
     val hudVisible: StateFlow<Boolean> = hud.asStateFlow()
 
     private val sources = MutableStateFlow(listOf(selectedSource.value))
@@ -60,7 +66,7 @@ class LiveViewModel(
     private val lastStart = MutableStateFlow<StartResult?>(null)
     val startResult: StateFlow<StartResult?> = lastStart.asStateFlow()
 
-    internal val renderer = FrameRenderer(display)
+    internal val renderer = FrameRenderer(display, tracer)
     private var lastReported: AnnotatedFrame? = null
 
     fun start() {

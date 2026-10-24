@@ -18,6 +18,7 @@
     <string name="readout">%1$s fps · %2$s ms</string>
     <string name="idle_hint">Press Start to analyse the video source</string>
     <string name="hud_source">Source</string>
+    <string name="hud_backend">Backend</string>
     <string name="hud_input_fps">In fps</string>
     <string name="hud_inference_fps">Inf fps</string>
     <string name="hud_inference_ms">Inf ms</string>

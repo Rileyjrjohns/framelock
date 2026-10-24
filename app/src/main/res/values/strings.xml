@@ -7,4 +7,5 @@
     <string name="source_back">Back camera</string>
     <string name="source_front">Front camera</string>
     <string name="source_external">External camera</string>
+    <string name="source_file">Test video</string>
 </resources>

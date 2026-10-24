@@ -78,6 +78,7 @@ fun LiveScreen(
     val description by viewModel.sourceDescription.collectAsStateWithLifecycle()
     val thermal by viewModel.thermal.collectAsStateWithLifecycle()
     val memory by viewModel.memory.collectAsStateWithLifecycle()
+    val backend by viewModel.backend.collectAsStateWithLifecycle()
     val controls =
         ControlsState(
             running = ui.state != PipelineState.Idle,
@@ -102,7 +103,14 @@ fun LiveScreen(
             live = live,
             startResult = startResult,
             // Stopped, the metrics are those of the last session: the HUD only shows while something runs.
-            hud = if (hudVisible && ui.state != PipelineState.Idle) HudState(description, thermal, memory) else null,
+            hud =
+                if (hudVisible &&
+                    ui.state != PipelineState.Idle
+                ) {
+                    HudState(description, backend, thermal, memory)
+                } else {
+                    null
+                },
             controls = controls,
             actions = actions,
             haze = haze,
@@ -163,6 +171,7 @@ private class FrameCallbacks(
 /** What the debug HUD shows; null while it is hidden. */
 private class HudState(
     val sourceDescription: String?,
+    val backend: String?,
     val thermal: ThermalLevel,
     val memory: MemoryPressure,
 )
@@ -206,7 +215,16 @@ private fun VideoArea(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             StatusOverlay(ui, startResult, live, showReadout = hud == null, Modifier.fillMaxWidth())
-            hud?.let { Hud(live, it.sourceDescription, it.thermal, it.memory, Modifier.align(Alignment.End)) }
+            hud?.let {
+                Hud(
+                    live,
+                    it.sourceDescription,
+                    it.backend,
+                    it.thermal,
+                    it.memory,
+                    Modifier.align(Alignment.End),
+                )
+            }
         }
     }
 }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 private val LABELS = SourceLabels(auto = "Auto", back = "Back", front = "Front", external = "External")
 
@@ -25,6 +26,7 @@ class SelectingFrameSourceTest {
     private val uvc = FakeFrameSource()
     private val back = FakeFrameSource()
     private val front = FakeFrameSource()
+    private val file = FakeFrameSource()
     private val uvcMode = MutableStateFlow<String?>(null)
     private var choice: SourceChoice = SourceChoice.Auto
     private var hasUvc = false
@@ -32,6 +34,7 @@ class SelectingFrameSourceTest {
     private fun TestScope.selecting(
         hasExternal: Boolean = false,
         hasUvc: Boolean = false,
+        withFile: Boolean = false,
     ): SelectingFrameSource {
         this@SelectingFrameSourceTest.hasUvc = hasUvc
         return SelectingFrameSource(
@@ -39,6 +42,7 @@ class SelectingFrameSourceTest {
             uvc,
             back,
             front,
+            file = if (withFile) file else null,
             choice = { choice },
             hasExternalCamera = { hasExternal },
             hasUvcDevice = { this@SelectingFrameSourceTest.hasUvc },
@@ -155,6 +159,39 @@ class SelectingFrameSourceTest {
 
                 assertEquals(expected, opened().zip(before) { now, then -> now - then }, explicit.toString())
             }
+        }
+
+    @Test
+    fun `the test video opens only when chosen`() =
+        runTest {
+            choice = SourceChoice.File
+            val source = selecting(hasExternal = true, hasUvc = true, withFile = true)
+
+            source.open()
+            runCurrent()
+
+            assertEquals(listOf(0, 0, 0, 0), opened())
+            assertEquals(1, file.openCalls)
+            assertEquals("Test video", source.activeDescription.value)
+        }
+
+    @Test
+    fun `Auto never picks the test video`() =
+        runTest {
+            val source = selecting(withFile = true)
+
+            source.open()
+
+            assertEquals(0, file.openCalls)
+        }
+
+    @Test
+    fun `choosing the test video in a build without it fails loudly`() =
+        runTest {
+            choice = SourceChoice.File
+            val source = selecting()
+
+            assertThrows<IllegalStateException> { source.open() }
         }
 
     @Test

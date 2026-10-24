@@ -16,6 +16,9 @@ sealed interface SourceChoice {
 
     data object Front : SourceChoice
 
+    /** The looping test video (debug builds, M7 measurements). */
+    data object File : SourceChoice
+
     /** The attached UVC device with [deviceId] (`UvcDeviceInfo.id`). */
     data class Uvc(
         val deviceId: String,
@@ -28,6 +31,7 @@ data class SourceLabels(
     val back: String,
     val front: String,
     val external: String,
+    val file: String = "Test video",
 )
 
 private const val UVC_PREFIX = "uvc:"
@@ -35,10 +39,12 @@ private const val AUTO_ID = "auto"
 private const val BACK_ID = "back"
 private const val FRONT_ID = "front"
 private const val EXTERNAL_ID = "external"
+private const val FILE_ID = "file"
 
 /**
  * The picker entries for what is available now: `Auto` always, then the cameras CameraX reports, then one entry per
- * attached UVC device. The back camera is listed when CameraX reports it. Pure, so it is tested on the JVM.
+ * attached UVC device, then the test video when [hasTestVideo] (debug builds with the file in place). The back camera is
+ * listed when CameraX reports it. Pure, so it is tested on the JVM.
  */
 fun buildSourceOptions(
     labels: SourceLabels,
@@ -46,6 +52,7 @@ fun buildSourceOptions(
     hasFront: Boolean,
     hasExternal: Boolean,
     uvcDevices: List<UvcDeviceInfo>,
+    hasTestVideo: Boolean = false,
 ): List<SourceOption> =
     buildList {
         add(SourceOption(AUTO_ID, labels.auto))
@@ -53,6 +60,7 @@ fun buildSourceOptions(
         if (hasFront) add(SourceOption(FRONT_ID, labels.front))
         if (hasExternal) add(SourceOption(EXTERNAL_ID, labels.external))
         uvcDevices.forEach { add(SourceOption(UVC_PREFIX + it.id, it.label)) }
+        if (hasTestVideo) add(SourceOption(FILE_ID, labels.file))
     }
 
 /** The choice an option id stands for; an unknown id is [SourceChoice.Auto]. */
@@ -61,6 +69,7 @@ fun choiceOf(optionId: String): SourceChoice =
         optionId == BACK_ID -> SourceChoice.Back
         optionId == FRONT_ID -> SourceChoice.Front
         optionId == EXTERNAL_ID -> SourceChoice.External
+        optionId == FILE_ID -> SourceChoice.File
         optionId.startsWith(UVC_PREFIX) -> SourceChoice.Uvc(optionId.removePrefix(UVC_PREFIX))
         else -> SourceChoice.Auto
     }

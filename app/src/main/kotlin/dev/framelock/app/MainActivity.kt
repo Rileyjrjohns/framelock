@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -35,8 +36,20 @@ import dev.framelock.models.ui.ModelsViewModel
 
 class MainActivity : ComponentActivity() {
     private val graph by lazy { (application as FramelockApplication).graph }
+
+    // Debug builds only: a script drives a run through intent extras (see DebugLaunch). Release builds ignore them.
+    private val debugLaunch by lazy {
+        if (graph.debuggable) {
+            DebugLaunch.parse(
+                string = { intent.getStringExtra(it) },
+                flag = { intent.getBooleanExtra(it, false) },
+            )
+        } else {
+            DebugLaunch.NONE
+        }
+    }
     private val liveViewModel: LiveViewModel by viewModels {
-        viewModelFactory { initializer { graph.liveViewModel() } }
+        viewModelFactory { initializer { graph.liveViewModel(hudVisibleAtStart = debugLaunch.hud) } }
     }
     private val modelsViewModel: ModelsViewModel by viewModels {
         viewModelFactory { initializer { graph.modelsViewModel() } }
@@ -49,6 +62,10 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        // Only on a fresh launch: a recreation (rotation) must not start again what the user stopped.
+        if (savedInstanceState == null) graph.applyDebugLaunch(debugLaunch) { liveViewModel.start() }
+        // A scripted run must not lose its screen to the display timeout: nothing would be drawn.
+        if (debugLaunch.isActive) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
             FramelockTheme {
                 Surface(Modifier.fillMaxSize()) { Navigation() }

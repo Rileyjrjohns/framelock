@@ -1,6 +1,9 @@
 package dev.framelock.live.ui
 
 import android.graphics.Bitmap
+import dev.framelock.kernel.port.TraceSection
+import dev.framelock.kernel.port.Tracer
+import dev.framelock.kernel.port.trace
 import dev.framelock.live.application.pipeline.AnnotatedFrame
 import dev.framelock.live.application.pipeline.DisplaySlot
 import dev.framelock.live.domain.frame.ImageFormat
@@ -9,9 +12,12 @@ import dev.framelock.live.domain.frame.ImageFormat
  * Copies the analysed frame into one of two reused bitmaps (ADR-010): the copy happens inside [DisplaySlot.read],
  * and only when the frame in the slot is the one [AnnotatedFrame] describes, so the overlay always matches the
  * pixels under it (ADR-001). Main thread only.
+ *
+ * The conversion and the bitmap upload are the `RENDER` trace section (ADR-009); it begins and ends on the main thread.
  */
 internal class FrameRenderer(
     private val display: DisplaySlot,
+    private val tracer: Tracer,
 ) {
     private val bitmaps = arrayOfNulls<Bitmap>(2)
     private var pixels = IntArray(0)
@@ -22,6 +28,10 @@ internal class FrameRenderer(
     /** The bitmap to draw for [annotated], or null if the slot already moved on (the next state will follow). */
     fun bitmapFor(annotated: AnnotatedFrame): Bitmap? {
         if (annotated == shownFrame) return shownBitmap
+        return tracer.trace(TraceSection.RENDER) { render(annotated) }
+    }
+
+    private fun render(annotated: AnnotatedFrame): Bitmap? {
         val copied =
             display.read { frame ->
                 val matches = frame != null && frame.id == annotated.frameId && frame.sessionId == annotated.sessionId

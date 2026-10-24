@@ -1,5 +1,6 @@
 package dev.framelock.live.inference.litert
 
+import android.util.Log
 import dev.framelock.kernel.model.ModelArtifact
 import dev.framelock.kernel.port.TraceSection
 import dev.framelock.kernel.port.Tracer
@@ -10,6 +11,9 @@ import dev.framelock.live.domain.inference.InferenceResult
 import dev.framelock.live.domain.port.InferenceEngine
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.gpu.CompatibilityList
@@ -25,6 +29,13 @@ import java.util.concurrent.Executors
 enum class Backend { GPU, CPU }
 
 /**
+ * Which backend the engine is asked to use. [AUTO] is the production behaviour (GPU when supported, CPU otherwise);
+ * [GPU] and [CPU] force one for a measurement and are offered by debug builds only. A forced [GPU] that cannot be
+ * built fails the load instead of falling back: a benchmark must not silently measure the other backend.
+ */
+enum class BackendPreference { AUTO, GPU, CPU }
+
+/**
  * [InferenceEngine] over LiteRT 1.4 (ADR-005): the GPU delegate when [CompatibilityList] supports this device, the
  * CPU with XNNPACK otherwise or if the GPU path fails to build. Everything runs on [dispatcher], a single thread
  * created here (ADR-002): the GPU delegate is created, invoked and closed on it.
@@ -32,28 +43,35 @@ enum class Backend { GPU, CPU }
  * Expects a detection model with a uint8 `[1, H, W, 3]` input and the four outputs of the TFLite detection
  * post-processing op (boxes, classes, scores, count), such as EfficientDet-Lite0 (docs/soup.md). Input and output
  * buffers are allocated at load and reused for every frame (ADR-012).
+ *
+ * [preference] is read at each load. The backend actually used is logged once per load (tag `LiteRtEngine`) and
+ * published in [backend].
  */
 class LiteRtInferenceEngine(
     private val tracer: Tracer,
     private val minScore: Float = DEFAULT_MIN_SCORE,
     private val cpuThreads: Int = DEFAULT_CPU_THREADS,
+    private val preference: () -> BackendPreference = { BackendPreference.AUTO },
 ) : InferenceEngine {
     private val executor = Executors.newSingleThreadExecutor { Thread(it, THREAD_NAME) }
     override val dispatcher: CoroutineDispatcher = executor.asCoroutineDispatcher()
 
     private var loaded: Loaded? = null
 
+    private val activeBackend = MutableStateFlow<Backend?>(null)
+
     /** The backend of the loaded model, for the debug HUD; null before the first load. */
-    @Volatile var backend: Backend? = null
-        private set
+    val backend: StateFlow<Backend?> = activeBackend.asStateFlow()
 
     override suspend fun load(model: ModelArtifact) {
-        val next = open(model)
+        val requested = preference()
+        val next = open(model, requested)
         // Warm-up: the first run initialises the delegate and the kernels; it must not hit the first real frame.
         next.interpreter.runForMultipleInputsOutputs(arrayOf(next.input), next.outputs)
         loaded?.close()
         loaded = next
-        backend = next.backend
+        activeBackend.value = next.backend
+        Log.i(LOG_TAG, "Backend ${next.backend} (requested $requested)")
     }
 
     override fun infer(frame: Frame): InferenceResult {
@@ -108,11 +126,16 @@ class LiteRtInferenceEngine(
         executor.shutdown()
     }
 
-    private fun open(model: ModelArtifact): Loaded {
+    private fun open(
+        model: ModelArtifact,
+        requested: BackendPreference,
+    ): Loaded {
         val buffer = map(File(model.location))
         val gpu =
             CompatibilityList().use { compatibility ->
-                if (compatibility.isDelegateSupportedOnThisDevice) {
+                if (requested == BackendPreference.CPU) {
+                    null
+                } else if (requested == BackendPreference.GPU || compatibility.isDelegateSupportedOnThisDevice) {
                     runCatching { GpuDelegate(compatibility.bestOptionsForThisDevice) }.getOrNull()
                 } else {
                     null
@@ -125,6 +148,9 @@ class LiteRtInferenceEngine(
                     .onFailure { delegate.close() }
                     .getOrNull()
             }
+        check(
+            requested != BackendPreference.GPU || onGpu != null,
+        ) { "The GPU backend was requested but could not be built" }
         val interpreter =
             onGpu ?: Interpreter(buffer, Interpreter.Options().setNumThreads(cpuThreads).setUseXNNPACK(true))
         val delegate = if (onGpu != null) gpu else null
@@ -231,6 +257,7 @@ class LiteRtInferenceEngine(
 
     private companion object {
         const val THREAD_NAME = "inference"
+        const val LOG_TAG = "LiteRtEngine"
         const val DEFAULT_MIN_SCORE = 0.5f
         const val DEFAULT_CPU_THREADS = 4
     }

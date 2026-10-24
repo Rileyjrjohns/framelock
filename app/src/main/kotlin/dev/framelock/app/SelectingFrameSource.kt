@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.stateIn
  * knows every adapter, so the choice lives here.
  *
  * The user's [choice] decides:
- * - an explicit choice opens that source: [external], [uvc] (the device the UVC source was told to use), [back] or
- *   [front];
+ * - an explicit choice opens that source: [external], [uvc] (the device the UVC source was told to use), [back],
+ *   [front] or, in debug builds, [file] (the looping test video of the M7 measurements, never chosen by Auto);
  * - [SourceChoice.Auto] applies the order of preference:
  *   1. [external]: a camera Camera2 exposes as external, which is how a capture card appears on a device with
  *      `android.hardware.camera.external`;
@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.stateIn
  * capture card keeps being retried; it does not silently turn the app to the back camera). So a new [choice] applies at
  * the next session, after [close]; the UI only offers it while the pipeline is idle.
  *
- * [events] merges the events of the four sources; only the chosen one emits. Session ids stay increasing across them
+ * [events] merges the events of the sources; only the chosen one emits. Session ids stay increasing across them
  * because the sources share one `SessionIdSequence`.
  *
  * [activeDescription] is what the HUD shows: the label of the chosen camera, or, for [uvc], [uvcDescription] (device
@@ -41,6 +41,7 @@ class SelectingFrameSource(
     private val uvc: FrameSource,
     private val back: FrameSource,
     private val front: FrameSource,
+    private val file: FrameSource? = null,
     private val choice: () -> SourceChoice,
     private val hasExternalCamera: suspend () -> Boolean,
     private val hasUvcDevice: () -> Boolean,
@@ -48,7 +49,8 @@ class SelectingFrameSource(
     uvcDescription: StateFlow<String?>,
     scope: CoroutineScope,
 ) : FrameSource {
-    override val events: Flow<SourceEvent> = merge(external.events, uvc.events, back.events, front.events)
+    override val events: Flow<SourceEvent> =
+        listOfNotNull(external.events, uvc.events, back.events, front.events, file?.events).merge()
 
     private val chosen = MutableStateFlow<FrameSource?>(null)
 
@@ -59,6 +61,7 @@ class SelectingFrameSource(
                 source === uvc -> uvcMode
                 source === external -> labels.external
                 source === front -> labels.front
+                source === file -> labels.file
                 else -> labels.back
             }
         }.stateIn(scope, SharingStarted.Eagerly, null)
@@ -84,6 +87,10 @@ class SelectingFrameSource(
 
             SourceChoice.Front -> {
                 front
+            }
+
+            SourceChoice.File -> {
+                checkNotNull(file) { "This build has no test video source" }
             }
 
             is SourceChoice.Uvc -> {

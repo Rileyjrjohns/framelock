@@ -50,6 +50,7 @@ private class HudValues(
 internal fun Hud(
     live: LiveMetrics,
     sourceDescription: String?,
+    backend: String?,
     thermal: ThermalLevel,
     memory: MemoryPressure,
     modifier: Modifier = Modifier,
@@ -65,6 +66,8 @@ internal fun Hud(
                 HudRow(R.string.hud_source, it)
                 Separator()
             }
+            // Like the source line, it changes only when a model is loaded.
+            backend?.let { HudRow(R.string.hud_backend, it) }
             HudRow(R.string.hud_input_fps, values.inputFps)
             HudRow(R.string.hud_inference_fps, values.inferenceFps)
             Separator()
@@ -125,6 +128,7 @@ private fun HudPreview() {
             droppedFrames = 7,
         ),
         sourceDescription = "Back camera",
+        backend = "GPU",
         thermal = ThermalLevel.NONE,
         memory = MemoryPressure.NORMAL,
     )
