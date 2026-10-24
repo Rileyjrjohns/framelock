@@ -4,7 +4,8 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 (HDMI → USB) or from the device camera; a detection model runs on each analysed frame, and the result is
 drawn on the exact frame it was computed from.
 
-> Status: **M7, performance pass, step 1: measurement tooling.** A fixed input video played by a debug source and a scripted 10-minute run with a Perfetto trace and a results table: see [docs/perf/README.md](docs/perf/README.md). No optimisation yet, no baseline recorded.
+> Status: **M7, performance pass: three measured optimisations.** End-to-end latency 1.13 s → 119 ms and 2.6 → 14.3
+> analyses per second on a fixed 1080p input: see [docs/perf/results.md](docs/perf/results.md). Release APK on tag: pending.
 >
 > Before that, **M6, telemetry.** Accepted events are stored in a capped Room table and uploaded in gzipped JSON batches by WorkManager; the default uploader only logs ([ADR-004](docs/adr/ADR-004-typed-telemetry.md), amendment M6).
 >
