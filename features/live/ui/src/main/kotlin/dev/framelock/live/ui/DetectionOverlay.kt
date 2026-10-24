@@ -54,7 +54,7 @@ private val ChipFill = Color(GlassPalette.CHIP_FILL)
 @Composable
 internal fun AnalysedFrame(
     annotated: AnnotatedFrame,
-    bitmapFor: (AnnotatedFrame) -> Bitmap?,
+    bitmapFor: (AnnotatedFrame, Int, Int) -> Bitmap?,
     labelOf: (LabelId) -> String,
     onDraw: (AnnotatedFrame) -> Unit,
     modifier: Modifier = Modifier,
@@ -67,8 +67,8 @@ internal fun AnalysedFrame(
     val (boxStroke, glowStroke) =
         remember(density) { with(density) { Stroke(BoxStroke.toPx()) to Stroke(GlowStroke.toPx()) } }
     Canvas(modifier.fillMaxSize()) {
-        val bitmap = bitmapFor(annotated) ?: return@Canvas
         val fit = fitInto(size.width, size.height, annotated.width.toFloat(), annotated.height.toFloat())
+        val bitmap = bitmapFor(annotated, fit.width.toInt(), fit.height.toInt()) ?: return@Canvas
         drawImage(
             bitmap.asImageBitmap(),
             dstOffset = IntOffset(fit.left.toInt(), fit.top.toInt()),

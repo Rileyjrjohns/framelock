@@ -163,7 +163,7 @@ private fun LiveLayout(
 
 /** What the analysed frame needs from the view model: its pixels, the label names, and the report that it was drawn. */
 private class FrameCallbacks(
-    val bitmapFor: (AnnotatedFrame) -> Bitmap?,
+    val bitmapFor: (AnnotatedFrame, Int, Int) -> Bitmap?,
     val labelOf: (LabelId) -> String,
     val onDraw: (AnnotatedFrame) -> Unit,
 )
