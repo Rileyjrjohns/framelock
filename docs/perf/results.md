@@ -21,6 +21,7 @@ here. The numbers come from `scripts/perf/run.sh`; each row links to its run dir
 | [baseline](runs/baseline/summary.md) | 2026-10-24 | test phone, Android 16 | GPU | debug build, GPU auto, file source 1080p30, USB powered | 55.9 / 76.3 | 1130.1 / 1408.0 | 4.2 | 2.6 | 892 | 185 | 400 | 28.7 → 31.8 (skin 33.0 → 36.9) | `runs/baseline/baseline.perfetto-trace` (local) |
 | [opt1-render](runs/opt1-render/summary.md) | 2026-10-24 | test phone, Android 16 | GPU | render at on-screen size, table-driven loops | 56.1 / 66.5 | 264.5 / 302.7 | 11.1 | 9.3 | 1207 | 201 | 354 | 32.5 → 32.6 (skin 34.9 → 38.7) | `runs/opt1-render/opt1-render.perfetto-trace` (local) |
 | [opt2-preprocess](runs/opt2-preprocess/summary.md) | 2026-10-24 | test phone, Android 16 | GPU | preprocess with cached tables and bulk reads (on top of opt1) | 59.9 / 73.2 | 168.8 / 190.6 | 11.4 | 11.4 | 57 | 201 | 355 | 32.9 → 34.0 (skin 35.9 → 39.1) | `runs/opt2-preprocess/opt2-preprocess.perfetto-trace` (local) |
+| [opt3-capture](runs/opt3-capture/summary.md) | 2026-10-24 | test phone, Android 16 | GPU | allocation-free plane copy at capture (on top of opt2) | 63.1 / 71.0 | 119.2 / 141.3 | 30.0 | 14.3 | 9241 | 188 | 368 | 33.0 → 32.4 (skin 34.7 → 37.9) | `runs/opt3-capture/opt3-capture.perfetto-trace` (local) |
 
 ## Input video
 
