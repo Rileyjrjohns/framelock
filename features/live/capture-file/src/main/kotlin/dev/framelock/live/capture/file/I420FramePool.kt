@@ -28,6 +28,9 @@ internal class I420FramePool(
 ) {
     private val free = ArrayBlockingQueue<PooledI420Buffer>(capacity)
 
+    /** Scratch and cached views shared by every buffer of this pool; frames are copied one at a time. */
+    internal val copier = PlaneCopier()
+
     init {
         require(
             width > 0 && height > 0 && width % 2 == 0 && height % 2 == 0,
@@ -78,37 +81,14 @@ internal class PooledI420Buffer(
         vSource: SourcePlane,
     ) {
         inUse.set(true)
-        copyPlane(source, y, width, height)
-        copyPlane(uSource, u, width / 2, height / 2)
-        copyPlane(vSource, v, width / 2, height / 2)
+        pool.copier.copy(source, y, width, height)
+        pool.copier.copy(uSource, u, width / 2, height / 2)
+        pool.copier.copy(vSource, v, width / 2, height / 2)
     }
 
     /** Returns the buffer to its pool; a second close is ignored. */
     override fun close() {
         if (inUse.compareAndSet(true, false)) pool.release(this)
-    }
-
-    private fun copyPlane(
-        source: SourcePlane,
-        target: ByteBuffer,
-        columns: Int,
-        rows: Int,
-    ) {
-        target.clear()
-        val bytes = source.buffer
-        val start = bytes.position()
-        for (row in 0 until rows) {
-            val rowStart = start + row * source.rowStride
-            if (source.pixelStride == 1) {
-                val slice = bytes.duplicate()
-                slice.position(rowStart)
-                slice.limit(rowStart + columns)
-                target.put(slice)
-            } else {
-                for (column in 0 until columns) target.put(bytes.get(rowStart + column * source.pixelStride))
-            }
-        }
-        target.flip()
     }
 
     private companion object {
