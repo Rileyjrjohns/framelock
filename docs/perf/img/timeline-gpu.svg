@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="272" font-family="sans-serif" font-size="12">
+<rect width="100%" height="100%" fill="#0A0C10"/>
+<text x="190" y="26" fill="#F3F4F6" font-size="16" font-weight="600">GPU delegate: 1 s of steady state</text>
+<line x1="190.0" y1="58" x2="190.0" y2="202" stroke="#1F2937"/>
+<text x="190.0" y="220" fill="#9CA3AF" text-anchor="middle">0 ms</text>
+<line x1="269.0" y1="58" x2="269.0" y2="202" stroke="#1F2937"/>
+<text x="269.0" y="220" fill="#9CA3AF" text-anchor="middle">100 ms</text>
+<line x1="348.0" y1="58" x2="348.0" y2="202" stroke="#1F2937"/>
+<text x="348.0" y="220" fill="#9CA3AF" text-anchor="middle">200 ms</text>
+<line x1="427.0" y1="58" x2="427.0" y2="202" stroke="#1F2937"/>
+<text x="427.0" y="220" fill="#9CA3AF" text-anchor="middle">300 ms</text>
+<line x1="506.0" y1="58" x2="506.0" y2="202" stroke="#1F2937"/>
+<text x="506.0" y="220" fill="#9CA3AF" text-anchor="middle">400 ms</text>
+<line x1="585.0" y1="58" x2="585.0" y2="202" stroke="#1F2937"/>
+<text x="585.0" y="220" fill="#9CA3AF" text-anchor="middle">500 ms</text>
+<line x1="664.0" y1="58" x2="664.0" y2="202" stroke="#1F2937"/>
+<text x="664.0" y="220" fill="#9CA3AF" text-anchor="middle">600 ms</text>
+<line x1="743.0" y1="58" x2="743.0" y2="202" stroke="#1F2937"/>
+<text x="743.0" y="220" fill="#9CA3AF" text-anchor="middle">700 ms</text>
+<line x1="822.0" y1="58" x2="822.0" y2="202" stroke="#1F2937"/>
+<text x="822.0" y="220" fill="#9CA3AF" text-anchor="middle">800 ms</text>
+<line x1="901.0" y1="58" x2="901.0" y2="202" stroke="#1F2937"/>
+<text x="901.0" y="220" fill="#9CA3AF" text-anchor="middle">900 ms</text>
+<line x1="980.0" y1="58" x2="980.0" y2="202" stroke="#1F2937"/>
+<text x="980.0" y="220" fill="#9CA3AF" text-anchor="middle">1000 ms</text>
+<text x="180" y="91" fill="#E5E7EB" text-anchor="end">Capture (decode thread)</text>
+<rect x="200.8" y="72" width="2.5" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 3.2 ms</title></rect>
+<rect x="227.4" y="72" width="2.5" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 3.1 ms</title></rect>
+<rect x="255.1" y="72" width="9.4" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 11.9 ms</title></rect>
+<rect x="279.8" y="72" width="2.1" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 2.7 ms</title></rect>
+<rect x="308.5" y="72" width="5.2" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 6.5 ms</title></rect>
+<rect x="332.7" y="72" width="5.7" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 7.2 ms</title></rect>
+<rect x="360.1" y="72" width="5.9" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 7.5 ms</title></rect>
+<rect x="386.9" y="72" width="14.4" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 18.2 ms</title></rect>
+<rect x="412.0" y="72" width="7.7" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 9.7 ms</title></rect>
+<rect x="437.9" y="72" width="8.0" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 10.1 ms</title></rect>
+<rect x="464.2" y="72" width="2.4" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 3.0 ms</title></rect>
+<rect x="490.6" y="72" width="2.1" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 2.6 ms</title></rect>
+<rect x="516.8" y="72" width="5.1" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 6.4 ms</title></rect>
+<rect x="543.4" y="72" width="3.5" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 4.5 ms</title></rect>
+<rect x="569.6" y="72" width="8.8" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 11.1 ms</title></rect>
+<rect x="597.3" y="72" width="10.0" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 12.7 ms</title></rect>
+<rect x="622.1" y="72" width="2.4" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 3.0 ms</title></rect>
+<rect x="648.8" y="72" width="3.8" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 4.8 ms</title></rect>
+<rect x="674.8" y="72" width="2.3" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 2.9 ms</title></rect>
+<rect x="702.8" y="72" width="4.1" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 5.3 ms</title></rect>
+<rect x="729.3" y="72" width="2.4" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 3.1 ms</title></rect>
+<rect x="754.1" y="72" width="4.7" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 6.0 ms</title></rect>
+<rect x="780.2" y="72" width="4.6" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 5.8 ms</title></rect>
+<rect x="806.7" y="72" width="2.3" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 2.9 ms</title></rect>
+<rect x="833.1" y="72" width="2.7" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 3.4 ms</title></rect>
+<rect x="859.3" y="72" width="4.3" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 5.5 ms</title></rect>
+<rect x="885.5" y="72" width="2.1" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 2.6 ms</title></rect>
+<rect x="912.5" y="72" width="6.3" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 8.0 ms</title></rect>
+<rect x="940.7" y="72" width="4.4" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 5.6 ms</title></rect>
+<rect x="964.7" y="72" width="2.7" height="30" rx="2" fill="#60A5FA"><title>CAPTURE 3.5 ms</title></rect>
+<text x="180" y="137" fill="#E5E7EB" text-anchor="end">Inference thread</text>
+<rect x="190.0" y="118" width="43.4" height="30" rx="2" fill="#F87171"><title>INFERENCE 54.9 ms</title></rect>
+<text x="211.7" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">55</text>
+<rect x="190.0" y="118" width="1.1" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.3 ms</title></rect>
+<rect x="233.2" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="234.5" y="118" width="41.3" height="30" rx="2" fill="#F87171"><title>INFERENCE 52.3 ms</title></rect>
+<text x="255.2" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">52</text>
+<rect x="234.5" y="118" width="1.0" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.3 ms</title></rect>
+<rect x="274.5" y="118" width="1.3" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 1.6 ms</title></rect>
+<rect x="277.5" y="118" width="46.7" height="30" rx="2" fill="#F87171"><title>INFERENCE 59.2 ms</title></rect>
+<text x="300.9" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">59</text>
+<rect x="277.6" y="118" width="2.0" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 2.5 ms</title></rect>
+<rect x="324.1" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="325.1" y="118" width="39.5" height="30" rx="2" fill="#F87171"><title>INFERENCE 50.0 ms</title></rect>
+<text x="344.8" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">50</text>
+<rect x="325.1" y="118" width="1.0" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.3 ms</title></rect>
+<rect x="364.4" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="365.4" y="118" width="40.6" height="30" rx="2" fill="#F87171"><title>INFERENCE 51.3 ms</title></rect>
+<text x="385.7" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">51</text>
+<rect x="365.5" y="118" width="1.1" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.4 ms</title></rect>
+<rect x="405.9" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.1 ms</title></rect>
+<rect x="407.7" y="118" width="44.9" height="30" rx="2" fill="#F87171"><title>INFERENCE 56.8 ms</title></rect>
+<text x="430.1" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">57</text>
+<rect x="407.7" y="118" width="1.1" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.4 ms</title></rect>
+<rect x="452.3" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.3 ms</title></rect>
+<rect x="454.1" y="118" width="39.1" height="30" rx="2" fill="#F87171"><title>INFERENCE 49.4 ms</title></rect>
+<text x="473.6" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">49</text>
+<rect x="454.1" y="118" width="1.0" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.3 ms</title></rect>
+<rect x="493.0" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="495.9" y="118" width="41.1" height="30" rx="2" fill="#F87171"><title>INFERENCE 52.1 ms</title></rect>
+<text x="516.4" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">52</text>
+<rect x="495.9" y="118" width="2.0" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 2.5 ms</title></rect>
+<rect x="536.9" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.1 ms</title></rect>
+<rect x="537.8" y="118" width="39.7" height="30" rx="2" fill="#F87171"><title>INFERENCE 50.2 ms</title></rect>
+<text x="557.7" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">50</text>
+<rect x="537.8" y="118" width="1.0" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.3 ms</title></rect>
+<rect x="577.3" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="578.6" y="118" width="42.2" height="30" rx="2" fill="#F87171"><title>INFERENCE 53.5 ms</title></rect>
+<text x="599.7" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">53</text>
+<rect x="578.6" y="118" width="1.3" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.7 ms</title></rect>
+<rect x="620.7" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="622.6" y="118" width="40.3" height="30" rx="2" fill="#F87171"><title>INFERENCE 51.0 ms</title></rect>
+<text x="642.8" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">51</text>
+<rect x="622.7" y="118" width="1.1" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.4 ms</title></rect>
+<rect x="662.8" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="664.1" y="118" width="43.5" height="30" rx="2" fill="#F87171"><title>INFERENCE 55.0 ms</title></rect>
+<text x="685.8" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">55</text>
+<rect x="664.6" y="118" width="1.1" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.4 ms</title></rect>
+<rect x="707.4" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.1 ms</title></rect>
+<rect x="708.3" y="118" width="41.9" height="30" rx="2" fill="#F87171"><title>INFERENCE 53.0 ms</title></rect>
+<text x="729.3" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">53</text>
+<rect x="708.3" y="118" width="1.2" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.5 ms</title></rect>
+<rect x="750.1" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="751.5" y="118" width="42.7" height="30" rx="2" fill="#F87171"><title>INFERENCE 54.0 ms</title></rect>
+<text x="772.9" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">54</text>
+<rect x="751.6" y="118" width="1.0" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.3 ms</title></rect>
+<rect x="794.1" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="795.5" y="118" width="44.6" height="30" rx="2" fill="#F87171"><title>INFERENCE 56.5 ms</title></rect>
+<text x="817.8" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">56</text>
+<rect x="795.5" y="118" width="2.2" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 2.8 ms</title></rect>
+<rect x="840.0" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="841.1" y="118" width="42.0" height="30" rx="2" fill="#F87171"><title>INFERENCE 53.2 ms</title></rect>
+<text x="862.1" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">53</text>
+<rect x="841.1" y="118" width="1.1" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.4 ms</title></rect>
+<rect x="882.9" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="887.8" y="118" width="41.1" height="30" rx="2" fill="#F87171"><title>INFERENCE 52.0 ms</title></rect>
+<text x="908.3" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">52</text>
+<rect x="887.8" y="118" width="1.1" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 1.4 ms</title></rect>
+<rect x="928.7" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.2 ms</title></rect>
+<rect x="929.5" y="118" width="50.0" height="30" rx="2" fill="#F87171"><title>INFERENCE 63.3 ms</title></rect>
+<text x="954.5" y="137" fill="#0A0C10" text-anchor="middle" font-size="11">63</text>
+<rect x="929.5" y="118" width="4.9" height="30" rx="2" fill="#FBBF24"><title>PREPROCESS 6.2 ms</title></rect>
+<rect x="979.0" y="118" width="1.0" height="30" rx="2" fill="#34D399"><title>POSTPROCESS 0.6 ms</title></rect>
+<text x="180" y="183" fill="#E5E7EB" text-anchor="end">Render (main thread)</text>
+<rect x="201.8" y="164" width="5.3" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.7 ms</title></rect>
+<rect x="245.9" y="164" width="5.6" height="30" rx="2" fill="#A78BFA"><title>RENDER 7.1 ms</title></rect>
+<rect x="292.1" y="164" width="5.2" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.6 ms</title></rect>
+<rect x="336.8" y="164" width="5.2" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.6 ms</title></rect>
+<rect x="377.3" y="164" width="5.5" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.9 ms</title></rect>
+<rect x="412.0" y="164" width="6.4" height="30" rx="2" fill="#A78BFA"><title>RENDER 8.0 ms</title></rect>
+<rect x="466.3" y="164" width="6.0" height="30" rx="2" fill="#A78BFA"><title>RENDER 7.6 ms</title></rect>
+<rect x="503.0" y="164" width="5.4" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.9 ms</title></rect>
+<rect x="548.2" y="164" width="5.1" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.5 ms</title></rect>
+<rect x="588.8" y="164" width="4.8" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.1 ms</title></rect>
+<rect x="633.4" y="164" width="4.9" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.3 ms</title></rect>
+<rect x="676.8" y="164" width="5.0" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.4 ms</title></rect>
+<rect x="719.9" y="164" width="4.8" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.1 ms</title></rect>
+<rect x="764.8" y="164" width="5.0" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.3 ms</title></rect>
+<rect x="809.1" y="164" width="5.2" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.6 ms</title></rect>
+<rect x="853.1" y="164" width="4.8" height="30" rx="2" fill="#A78BFA"><title>RENDER 6.1 ms</title></rect>
+<rect x="905.8" y="164" width="6.3" height="30" rx="2" fill="#A78BFA"><title>RENDER 8.0 ms</title></rect>
+<rect x="937.5" y="164" width="6.1" height="30" rx="2" fill="#A78BFA"><title>RENDER 7.8 ms</title></rect>
+<rect x="190" y="236" width="12" height="12" rx="2" fill="#60A5FA"/>
+<text x="208" y="246" fill="#D1D5DB">CAPTURE</text>
+<rect x="320" y="236" width="12" height="12" rx="2" fill="#FBBF24"/>
+<text x="338" y="246" fill="#D1D5DB">PREPROCESS</text>
+<rect x="450" y="236" width="12" height="12" rx="2" fill="#F87171"/>
+<text x="468" y="246" fill="#D1D5DB">INFERENCE</text>
+<rect x="580" y="236" width="12" height="12" rx="2" fill="#34D399"/>
+<text x="598" y="246" fill="#D1D5DB">POSTPROCESS</text>
+<rect x="710" y="236" width="12" height="12" rx="2" fill="#A78BFA"/>
+<text x="728" y="246" fill="#D1D5DB">RENDER</text>
+<text x="980" y="246" fill="#9CA3AF" text-anchor="end">numbers: duration in ms</text>
+</svg>

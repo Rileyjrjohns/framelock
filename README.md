@@ -5,7 +5,8 @@ Real-time on-device inference on a live video feed, on Android. Frames come from
 drawn on the exact frame it was computed from.
 
 > Status: **M7, performance pass: three measured optimisations.** End-to-end latency 1.13 s → 119 ms and 2.6 → 14.3
-> analyses per second on a fixed 1080p input: see [docs/perf/results.md](docs/perf/results.md). Release APK built by CI on tags `v*`.
+> analyses per second on a fixed 1080p input: see [docs/perf/results.md](docs/perf/results.md); GPU delegate versus
+> CPU, measured: [docs/perf/gpu-vs-cpu.md](docs/perf/gpu-vs-cpu.md). Release APK built by CI on tags `v*`.
 >
 > Before that, **M6, telemetry.** Accepted events are stored in a capped Room table and uploaded in gzipped JSON batches by WorkManager; the default uploader only logs ([ADR-004](docs/adr/ADR-004-typed-telemetry.md), amendment M6).
 >

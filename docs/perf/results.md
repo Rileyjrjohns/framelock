@@ -22,6 +22,8 @@ the measurement: they are large, and they name the device by serial number and m
 | [opt1-render](runs/opt1-render/summary.md) | 2026-10-24 | test phone, Android 16 | GPU | render at on-screen size, table-driven loops | 56.1 / 66.5 | 264.5 / 302.7 | 11.1 | 9.3 | 1207 | 201 | 354 | 32.5 → 32.6 (skin 34.9 → 38.7) | `runs/opt1-render/opt1-render.perfetto-trace` (local) |
 | [opt2-preprocess](runs/opt2-preprocess/summary.md) | 2026-10-24 | test phone, Android 16 | GPU | preprocess with cached tables and bulk reads (on top of opt1) | 59.9 / 73.2 | 168.8 / 190.6 | 11.4 | 11.4 | 57 | 201 | 355 | 32.9 → 34.0 (skin 35.9 → 39.1) | `runs/opt2-preprocess/opt2-preprocess.perfetto-trace` (local) |
 | [opt3-capture](runs/opt3-capture/summary.md) | 2026-10-24 | test phone, Android 16 | GPU | allocation-free plane copy at capture (on top of opt2) | 63.1 / 71.0 | 119.2 / 141.3 | 30.0 | 14.3 | 9241 | 188 | 368 | 33.0 → 32.4 (skin 34.7 → 37.9) | `runs/opt3-capture/opt3-capture.perfetto-trace` (local) |
+| [backend-gpu](runs/backend-gpu/summary.md) | 2026-10-26 | test phone, Android 16 | GPU | GPU delegate forced (after opt3) | 62.9 / 70.4 | 119.1 / 140.4 | 30.0 | 14.4 | 8949 | 190 | 327 | 33.8 → 34.4 (skin 34.5 → 38.8) | `runs/backend-gpu/backend-gpu.perfetto-trace` (local) |
+| [backend-cpu](runs/backend-cpu/summary.md) | 2026-10-26 | test phone, Android 16 | CPU | CPU (XNNPACK) forced (after opt3); started at a warmer battery than the GPU run | 69.0 / 87.6 | 127.7 / 155.8 | 30.0 | 13.0 | 8772 | 249 | 262 | 30.4 → 33.0 (skin 31.1 → 38.5) | `runs/backend-cpu/backend-cpu.perfetto-trace` (local) |
 
 ## Findings (M7)
 
