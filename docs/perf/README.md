@@ -70,6 +70,25 @@ For a comparison, change one thing in the code, `./gradlew installDebug`, and ru
 - `trace_processor_shell` (from the Perfetto project, not downloaded by these scripts) enables the per-section p50/p95
   in the summary: put it on your PATH, then `python3 scripts/perf/summarize.py docs/perf/runs/<label>` re-reads a run.
 
+### Read a trace
+
+In the Perfetto UI, after opening the trace:
+
+1. **Find the app.** In the track list, expand the process `dev.framelock`. Its threads carry the app's sections:
+   `file-decode` (CAPTURE), `inference` (PREPROCESS, INFERENCE, POSTPROCESS) and the main thread `dev.framelock`
+   (RENDER). Zoom with W/S, pan with A/D, or drag on the timeline.
+2. **Read one frame.** Click an `INFERENCE` slice: the bottom panel gives its duration. Just before it on the same thread
+   sits its `PREPROCESS`; the `RENDER` of that frame comes later on the main thread.
+3. **Read many frames.** Drag across a few seconds of the `inference` track: the bottom panel lists every section in the
+   selection with its count, total and average duration.
+4. **See where threads run.** The `CPU n` tracks at the top show which thread ran on each core. On the test phone the
+   last two CPUs are the big cores (higher frequency); the `cpufreq` tracks show each core's frequency over time.
+5. **Ask with SQL.** The "Query (SQL)" page runs the files of `scripts/perf/queries/` as they are, or from a shell:
+   `trace_processor_shell -q scripts/perf/queries/<file>.sql <trace>`.
+   - `sections.sql`: count, mean, median and max of each section per thread;
+   - `threads.sql`: CPU seconds of the app's busy threads on each CPU (the GPU driver's threads appear here too);
+   - `cpufreq.sql`: time-weighted mean and max frequency of each CPU.
+
 ## Putting the video on the device by hand
 
 The app reads `filesDir/perf/input.mp4`, in its private storage:
