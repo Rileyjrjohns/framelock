@@ -155,23 +155,27 @@ def parse_log(text):
     return windows, backend, load_time
 
 
-def steady_windows(windows, load_time, warmup):
-    """Windows ending at least `warmup` seconds after the pipeline started.
+def steady_windows(windows, load_time, warmup, duration=None):
+    """Windows ending at least `warmup` seconds after the pipeline started, and within `duration` seconds of it.
 
-    The start is the engine's load line; without it, the first window's time minus one window.
+    The start is the engine's load line; without it, the first window's time minus one window. The duration bound
+    keeps a run comparable when the app ran longer than asked (a launch that blocked while the app already ran).
 
     >>> ws = [(20.0, {}), (30.0, {}), (35.0, {}), (55.0, {})]
     >>> [t for t, _ in steady_windows(ws, 0.0, 30)]
     [30.0, 35.0, 55.0]
     >>> [t for t, _ in steady_windows(ws, None, 30)]
     [55.0]
+    >>> [t for t, _ in steady_windows(ws, 0.0, 30, duration=40)]
+    [30.0, 35.0]
     """
     if not windows:
         return []
     start = load_time if load_time is not None else (windows[0][0] or 0.0) - WINDOW_SECONDS
     if windows[0][0] is None:
         return windows[max(0, int(warmup // WINDOW_SECONDS)):]
-    return [(t, f) for t, f in windows if t - start >= warmup]
+    limit = float("inf") if duration is None else duration + 1.0
+    return [(t, f) for t, f in windows if warmup <= t - start <= limit]
 
 
 def median(values):
@@ -346,7 +350,8 @@ def build_summary(run_dir, warmup):
 
     meta = parse_meta(read("meta.txt"))
     windows, backend, load_time = parse_log(read("logcat.txt"))
-    steady = steady_windows(windows, load_time, warmup)
+    seconds = meta.get("seconds")
+    steady = steady_windows(windows, load_time, warmup, int(seconds) if seconds and seconds.isdigit() else None)
     values = [fields for _, fields in steady]
     notes = []
     if not windows:

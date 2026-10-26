@@ -7,6 +7,8 @@
 #   --cooldown-timeout <s>    give up waiting for the cool-down after this long (default 1800)
 #   --backend <auto|gpu|cpu>  force the inference backend (debug builds; default auto = production behaviour)
 #   --no-trace                skip the Perfetto trace (the numbers still come from the app's own windows)
+#   --public                  record a trace fit for publishing: the app's own sections and CPU frequencies only,
+#                             no scheduling and no process list (those name every process on the device)
 #   --note <text>             what changed in this run, for results.md (default: the label)
 #   --force                   overwrite docs/perf/runs/<label>
 #
@@ -47,6 +49,7 @@ max_start_temp=33
 cooldown_timeout=1800
 backend=""
 trace=1
+public=0
 force=0
 note=""
 positional=()
@@ -56,6 +59,7 @@ while [[ $# -gt 0 ]]; do
     --cooldown-timeout) cooldown_timeout="${2:?--cooldown-timeout needs a value}"; shift 2 ;;
     --backend) backend="${2:?--backend needs auto, gpu or cpu}"; shift 2 ;;
     --no-trace) trace=0; shift ;;
+    --public) public=1; shift ;;
     --note) note="${2:?--note needs a text}"; shift 2 ;;
     --force) force=1; shift ;;
     -h|--help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -217,10 +221,51 @@ data_sources { config { name: "linux.system_info" target_buffer: 1 } }
 PBTX
 }
 
+# The public variant leaves out what names other processes: scheduling and wakeups, task names, process stats and
+# the system-wide atrace categories. What stays: the app's own atrace sections (filtered by package), CPU frequency and
+# idle, battery counters, and the device description that every Perfetto trace carries.
+public_config() {
+  local duration_ms=$(( (seconds + TRACE_MARGIN) * 1000 ))
+  cat <<PBTX
+duration_ms: $duration_ms
+write_into_file: true
+file_write_period_ms: 5000
+flush_period_ms: 10000
+buffers { size_kb: 32768 fill_policy: RING_BUFFER }
+buffers { size_kb: 4096 fill_policy: RING_BUFFER }
+data_sources {
+  config {
+    name: "linux.ftrace"
+    target_buffer: 0
+    ftrace_config {
+      ftrace_events: "power/cpu_frequency"
+      ftrace_events: "power/cpu_idle"
+      ftrace_events: "power/gpu_frequency"
+      atrace_apps: "$PACKAGE"
+      buffer_size_kb: 8192
+    }
+  }
+}
+data_sources {
+  config {
+    name: "android.power"
+    target_buffer: 1
+    android_power_config {
+      battery_poll_ms: 1000
+      battery_counters: BATTERY_COUNTER_CAPACITY_PERCENT
+      battery_counters: BATTERY_COUNTER_CURRENT
+    }
+  }
+}
+data_sources { config { name: "linux.system_info" target_buffer: 1 } }
+PBTX
+}
+
 start_trace() {
-  local mode out
-  for mode in full basic; do
-    perfetto_config "$mode" > "$run_dir/perfetto-config-$mode.pbtx"
+  local mode out modes="full basic"
+  [[ $public -eq 1 ]] && modes="public"
+  for mode in $modes; do
+    if [[ "$mode" == public ]]; then public_config; else perfetto_config "$mode"; fi > "$run_dir/perfetto-config-$mode.pbtx"
     if out="$(adb shell perfetto -c - --txt --background -o "$remote_trace" < "$run_dir/perfetto-config-$mode.pbtx" 2>"$run_dir/perfetto-$mode.err")" \
       && [[ "$(echo "$out" | tr -d '\r\n ')" =~ ^[0-9]+$ ]]; then
       trace_pid="$(echo "$out" | tr -d '\r\n ')"
@@ -247,7 +292,8 @@ logcat_pid=$!
 launch_args=(-e source file --ez autostart true --ez hud true)
 [[ -n "$backend" ]] && launch_args+=(-e backend "$backend")
 log "Launching: am start ${launch_args[*]}"
-adb shell am start -W -n "$ACTIVITY" "${launch_args[@]}" > "$run_dir/am-start.txt"
+# No -W: with the screen off it can block for minutes while the app already runs, which lengthens the run unseen.
+adb shell am start -n "$ACTIVITY" "${launch_args[@]}" > "$run_dir/am-start.txt"
 grep -q "^Error" "$run_dir/am-start.txt" && die "launch failed: $(grep "^Error" "$run_dir/am-start.txt" | tail -1)"
 launch_uptime="$(uptime_s)"
 
