@@ -9,6 +9,14 @@ import org.junit.jupiter.api.Test
  */
 class RuleFixturesTest {
     @Test
+    fun `Koin is confined to app while other DI stays forbidden there`() {
+        val violations = Rules.referencesToDependencyInjection(Scopes.fixture("koin-boundary"))
+        assertEquals(4, violations.size)
+        assertEquals(3, violations.count { it.endsWith("org.koin.dsl.module") })
+        assertEquals(1, violations.count { it.endsWith("javax.inject.Singleton") })
+    }
+
+    @Test
     fun `android referenced by its qualified name in a pure module is caught, not when in a comment`() {
         val violations = Rules.pureReferencesToAndroid(Scopes.fixture("android-qualified-in-pure-module"))
 

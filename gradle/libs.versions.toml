@@ -2,6 +2,7 @@
 # Prereleases that exist are noted so nobody "upgrades" to them by accident.
 
 [versions]
+koin = "4.2.2" # Stable, Maven Central and official setup documentation, 2026-10-27.
 # ---------- Toolchain ----------
 # AGP 9.4.1: newest stable (9.5.0-rc01 is a prerelease). Max API 37, min Gradle 9.6.0, JDK 17.
 # Built-in Kotlin is ON: never apply org.jetbrains.kotlin.android (the build fails if you do).
@@ -77,6 +78,12 @@ composeRules = "0.6.8"            # built for ktlint 1.8.0 (its release dependen
 detekt = "1.23.8"
 
 [libraries]
+koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android" }
+koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose" }
+koin-test = { module = "io.insert-koin:koin-test" }
+koin-test-junit5 = { module = "io.insert-koin:koin-test-junit5" }
+
 # ---------- Build logic (convention plugins in build-logic/, and the root buildscript classpath) ----------
 android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }

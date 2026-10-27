@@ -144,7 +144,9 @@ abstract class VerifyModuleBoundaries : DefaultTask() {
                 "module", "direct-module" -> {
                     // Only what a module declares itself: libraries may use DI internally (CameraX's
                     // camera2-pipe depends on Dagger at runtime). Konsist forbids any DI reference in our code.
-                    if (production && kind == "direct-module" && ModuleRole.isDependencyInjection(target)) {
+                    if (production && kind == "direct-module" && ModuleRole.isDependencyInjection(target) &&
+                        !(role.layer == Layer.APP && target.startsWith("io.insert-koin:"))
+                    ) {
                         violations += "No DI framework or annotation library is allowed: $target on '$classpath'"
                     } else if (role.isPure && production && !ModuleRole.isAllowedInPure(target)) {
                         violations += "$role may only use kotlinx-coroutines-core, found $target on '$classpath'"

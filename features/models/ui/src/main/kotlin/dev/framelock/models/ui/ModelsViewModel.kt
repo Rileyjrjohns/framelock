@@ -52,16 +52,12 @@ data class ModelsUiState(
 }
 
 /**
- * What the Models screen needs. The use cases come in as functions so `:app` wires them (ADR-014). One action runs at
+ * What the Models screen needs. The operations are supplied by `:app` (ADR-014). One action runs at
  * a time; each one refreshes the list afterwards. [canSwap] mirrors `ModelSwapPolicy`: the screen disables every
  * action while it is false, and the use cases refuse anyway.
  */
 class ModelsViewModel(
-    private val listModels: suspend () -> List<ModelRow>,
-    private val importModel: suspend (ModelSource) -> ImportResult,
-    private val activateModel: suspend (ModelVersion) -> ModelChangeResult,
-    private val rollbackModel: suspend () -> ModelChangeResult,
-    /** The policy allows a swap or an import right now. */
+    private val actions: ModelsActions,
     val canSwap: StateFlow<Boolean>,
     /** Wired in `:app` to `TrackUiInteraction` (ADR-004). */
     val track: (ElementId) -> Unit,
@@ -81,7 +77,7 @@ class ModelsViewModel(
 
     fun import(source: ModelSource) {
         run {
-            when (val result = importModel(source)) {
+            when (val result = actions.import(source)) {
                 is ImportResult.Imported -> ModelsOutcome.Imported(result.manifest.version)
                 is ImportResult.Refused -> ModelsOutcome.Refused(result.reason)
             }
@@ -89,11 +85,11 @@ class ModelsViewModel(
     }
 
     fun activate(version: ModelVersion) {
-        run { activateModel(version).toOutcome() }
+        run { actions.activate(version).toOutcome() }
     }
 
     fun rollback() {
-        run { rollbackModel().toOutcome() }
+        run { actions.rollback().toOutcome() }
     }
 
     /** Starts [action] unless another one is running. Called on the main thread, so taps cannot interleave. */
@@ -121,7 +117,7 @@ class ModelsViewModel(
     }
 
     private suspend fun reload() {
-        val rows = listModels()
+        val rows = actions.list()
         mutableState.update { it.copy(rows = rows) }
     }
 

@@ -204,6 +204,26 @@ class ModuleBoundariesPluginTest {
     }
 
     @Test
+    fun `Koin is allowed in app`() {
+        writeBuild(":app" to "implementation(\"io.insert-koin:koin-core:4.2.2\")")
+        assertSuccess()
+    }
+
+    @Test
+    fun `Koin is refused in pure adapter and ui modules`() {
+        for (module in listOf(LIVE_DOMAIN, LIVE_A, LIVE_UI)) {
+            writeBuild(module to "implementation(\"io.insert-koin:koin-core:4.2.2\")")
+            assertViolation("No DI framework or annotation library is allowed: io.insert-koin:koin-core")
+        }
+    }
+
+    @Test
+    fun `other DI is still refused in app`() {
+        writeBuild(":app" to "implementation(\"javax.inject:javax.inject:1\")")
+        assertViolation("No DI framework or annotation library is allowed: javax.inject:javax.inject")
+    }
+
+    @Test
     fun `DI library in an adapter fails`() {
         writeBuild(LIVE_A to "implementation(\"javax.inject:javax.inject:1\")")
 
@@ -366,6 +386,7 @@ class ModuleBoundariesPluginTest {
         val LOCAL_MODULES =
             listOf(
                 Triple("org.example", "extra", "1.0"),
+                Triple("io.insert-koin", "koin-core", "4.2.2"),
                 Triple("javax.inject", "javax.inject", "1"),
                 Triple("org.jetbrains", "annotations", "26.0.2"),
                 Triple("com.google.dagger", "dagger", "2.59"),

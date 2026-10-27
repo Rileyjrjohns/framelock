@@ -48,13 +48,19 @@ class ModelsViewModelTest {
 
     private fun viewModel() =
         ModelsViewModel(
-            listModels = {
-                listCalls++
-                rows
-            },
-            importModel = { importResult() },
-            activateModel = { activateResult(it) },
-            rollbackModel = { rollbackResult() },
+            actions =
+                object : ModelsActions {
+                    override suspend fun list(): List<ModelRow> {
+                        listCalls++
+                        return rows
+                    }
+
+                    override suspend fun import(source: ModelSource) = importResult()
+
+                    override suspend fun activate(version: ModelVersion) = activateResult(version)
+
+                    override suspend fun rollback() = rollbackResult()
+                },
             canSwap = MutableStateFlow(true),
             track = { tracked += it },
         )

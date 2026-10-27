@@ -12,7 +12,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -25,21 +24,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.framelock.kernel.telemetry.ScreenId
 import dev.framelock.live.ui.LiveScreen
 import dev.framelock.live.ui.LiveViewModel
 import dev.framelock.live.ui.PermissionPrompt
 import dev.framelock.models.ui.ModelsScreen
 import dev.framelock.models.ui.ModelsViewModel
+import dev.framelock.telemetry.application.TrackScreen
+import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.core.parameter.parametersOf
 
 class MainActivity : ComponentActivity() {
-    private val graph by lazy { (application as FramelockApplication).graph }
+    private val environment: AppEnvironment by inject()
+    private val debugHandler: DebugLaunchHandler by inject()
+    private val trackScreen: TrackScreen by inject()
 
     // Debug builds only: a script drives a run through intent extras (see DebugLaunch). Release builds ignore them.
     private val debugLaunch by lazy {
-        if (graph.debuggable) {
+        if (environment.debuggable) {
             DebugLaunch.parse(
                 string = { intent.getStringExtra(it) },
                 flag = { intent.getBooleanExtra(it, false) },
@@ -48,12 +51,8 @@ class MainActivity : ComponentActivity() {
             DebugLaunch.NONE
         }
     }
-    private val liveViewModel: LiveViewModel by viewModels {
-        viewModelFactory { initializer { graph.liveViewModel(hudVisibleAtStart = debugLaunch.hud) } }
-    }
-    private val modelsViewModel: ModelsViewModel by viewModels {
-        viewModelFactory { initializer { graph.modelsViewModel() } }
-    }
+    private val liveViewModel: LiveViewModel by viewModel { parametersOf(debugLaunch.hud) }
+    private val modelsViewModel: ModelsViewModel by viewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Dark, transparent system bars: the video runs under them and the screens pad themselves by the insets.
@@ -63,7 +62,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         // Only on a fresh launch: a recreation (rotation) must not start again what the user stopped.
-        if (savedInstanceState == null) graph.applyDebugLaunch(debugLaunch) { liveViewModel.start() }
+        if (savedInstanceState == null) debugHandler.apply(debugLaunch) { liveViewModel.start() }
         // A scripted run must not lose its screen to the display timeout: nothing would be drawn.
         if (debugLaunch.isActive) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
@@ -77,7 +76,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Navigation() {
         var screen by rememberSaveable { mutableStateOf(ScreenId.LIVE) }
-        LaunchedEffect(screen) { graph.trackScreen(screen) }
+        LaunchedEffect(screen) { trackScreen(screen) }
         BackHandler(enabled = screen == ScreenId.MODELS) { screen = ScreenId.LIVE }
         when (screen) {
             ScreenId.LIVE -> {

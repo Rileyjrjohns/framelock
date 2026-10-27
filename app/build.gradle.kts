@@ -27,7 +27,13 @@ android {
 }
 
 dependencies {
-    // Composition root (AppGraph, manual DI): the only module that sees every other one.
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+    testImplementation(platform(libs.koin.bom))
+    testImplementation(libs.koin.test)
+    testImplementation(libs.koin.test.junit5)
+    // Composition root (Koin, ADR-018): the only module that sees every other one.
     implementation(projects.features.live.application)
     implementation(projects.features.live.captureUvc)
     implementation(projects.features.live.captureCamerax)

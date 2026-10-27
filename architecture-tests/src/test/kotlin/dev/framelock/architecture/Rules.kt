@@ -78,7 +78,9 @@ internal object Rules {
         forbiddenReferences(files.filter { it.isPure && it.isProduction }, ANDROID_PREFIXES)
 
     fun referencesToDependencyInjection(files: List<SourceFile>): List<String> =
-        forbiddenReferences(files.filter { it.module != null }, DI_PREFIXES)
+        files.filter { it.module != null }.flatMap { file ->
+            forbiddenReferences(listOf(file), if (file.module == "app") DI_PREFIXES - "org.koin." else DI_PREFIXES)
+        }
 
     fun pureImportsOutsideAllowlist(files: List<SourceFile>): List<String> =
         files.filter { it.isPure && it.isProduction }.flatMap { file ->
