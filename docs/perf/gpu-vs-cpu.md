@@ -59,6 +59,9 @@ Reproduce:
 
 ## What the traces show
 
+INFERENCE encloses PREPROCESS and POSTPROCESS (the engine traces them inside `infer()`), so the model itself takes
+INFERENCE minus the two.
+
 Per-section durations from the full Perfetto traces (median / p95, ms). The GPU trace covers the whole run (625 s);
 the CPU trace stopped at the run script's 1 GiB file cap after about 7.5 minutes, so its figures miss the warmest part
 of the run, which flatters the CPU slightly.

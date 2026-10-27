@@ -27,6 +27,9 @@ the measurement: they are large, and they name the device by serial number and m
 
 ## Findings (M7)
 
+INFERENCE encloses PREPROCESS and POSTPROCESS (the engine traces them inside `infer()`), so the model itself takes
+INFERENCE minus the two.
+
 Per-section durations from the Perfetto traces (p50 / p95 in ms, steady state):
 
 | Section | Thread | baseline | opt1-render | opt2-preprocess | opt3-capture |
