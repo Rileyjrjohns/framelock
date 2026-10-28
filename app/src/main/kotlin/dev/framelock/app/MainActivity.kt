@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import dev.framelock.app.navigation.AppNavHost
+import dev.framelock.designsystem.FramelockTheme
 import dev.framelock.live.ui.LiveViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel

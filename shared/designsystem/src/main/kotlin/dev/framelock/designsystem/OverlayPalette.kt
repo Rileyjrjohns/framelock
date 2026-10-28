@@ -1,11 +1,11 @@
-package dev.framelock.live.ui
+package dev.framelock.designsystem
 
 /**
  * Colours for detection boxes: one per class, fixed, so a class keeps its colour from frame to frame and from run to
  * run. They are bright and saturated to stay visible on both dark and bright video; the box is also drawn over a dark
  * outline, and the label chip takes black or white text by contrast ([Contrast.textOn]).
  */
-internal object OverlayPalette {
+object OverlayPalette {
     private val colors =
         intArrayOf(
             0xFFFFD600.toInt(), // yellow

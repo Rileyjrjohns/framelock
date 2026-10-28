@@ -1,20 +1,11 @@
 package dev.framelock.live.ui
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,13 +13,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.framelock.designsystem.AppCard
+import dev.framelock.designsystem.StateColors
+import dev.framelock.designsystem.StatusChip
+import dev.framelock.designsystem.StatusMessage
+import dev.framelock.designsystem.TABULAR_NUMBERS
+import dev.framelock.designsystem.TextPrimary
+import dev.framelock.designsystem.TextSecondary
 import dev.framelock.kernel.model.ModelVersion
 import dev.framelock.live.application.metrics.LiveMetrics
 import dev.framelock.live.application.pipeline.PipelineUiState
@@ -77,13 +72,13 @@ private fun TopBar(
     val analysing = ui.state is PipelineState.Running || ui.state is PipelineState.Degraded
     val readout = if (showReadout && analysing) remember(live) { Readout(live) } else null
     val numbers = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_NUMBERS)
-    GlassSurface(Modifier.fillMaxWidth()) {
+    AppCard(Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            StatusChip(ui.state)
+            PipelineStatusChip(ui.state)
             Box(Modifier.weight(1f)) {
                 ui.model?.let {
                     Text(
@@ -109,41 +104,9 @@ private fun TopBar(
 
 /** A filled pill in the state's colour with dark text, and a pulsing dot while running. */
 @Composable
-private fun StatusChip(state: PipelineState) {
+private fun PipelineStatusChip(state: PipelineState) {
     val (text, argb) = bannerOf(state)
-    val fill by animateColorAsState(Color(argb), tween(COLOR_MILLIS), label = "state colour")
-    val onState = Color(StateColors.ON_STATE)
-    Row(
-        Modifier.clip(CircleShape).background(fill).padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (state is PipelineState.Running) PulsingDot(onState)
-        Text(
-            text,
-            color = onState,
-            style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun PulsingDot(color: Color) {
-    val pulse = rememberInfiniteTransition(label = "pulse")
-    val alpha by pulse.animateFloat(
-        PULSE_LOW,
-        1f,
-        infiniteRepeatable(tween(PULSE_MILLIS), RepeatMode.Reverse),
-        label = "pulse alpha",
-    )
-    Box(
-        Modifier
-            .size(DotSize)
-            .graphicsLayer { this.alpha = alpha }
-            .background(color, CircleShape),
-    )
+    StatusChip(text, argb, running = state is PipelineState.Running)
 }
 
 /** Why nothing is running: no model installed, or the active one did not load. */
@@ -164,15 +127,7 @@ private fun StartMessage(startResult: StartResult?) {
                 return
             }
         }
-    GlassSurface(Modifier.fillMaxWidth()) {
-        val tint = if (error) Color(GlassPalette.DANGER_FILL) else Color.Transparent
-        Text(
-            text,
-            Modifier.fillMaxWidth().background(tint).padding(horizontal = 20.dp, vertical = 16.dp),
-            color = TextPrimary,
-            style = MaterialTheme.typography.bodyLarge,
-        )
-    }
+    StatusMessage(text, error, Modifier.fillMaxWidth())
 }
 
 /** Colours are [StateColors], chosen for WCAG AA contrast with the dark chip text. */

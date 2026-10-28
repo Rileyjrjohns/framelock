@@ -15,6 +15,7 @@ internal object Rules {
     val MODULES =
         listOf(
             "shared/kernel",
+            "shared/designsystem",
             "shared/testing",
             "features/live/domain",
             "features/live/application",

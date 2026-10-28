@@ -10,6 +10,15 @@ import org.junit.jupiter.api.Test
  */
 class ModuleRoleTest {
     @Test
+    fun `design system declares only its presentation libraries`() {
+        assertEquals(true, ModuleRole.isAllowedInDesignSystem("androidx.compose:compose-bom"))
+        assertEquals(true, ModuleRole.isAllowedInDesignSystem("androidx.compose.material3:material3"))
+        assertEquals(true, ModuleRole.isAllowedInDesignSystem("dev.chrisbanes.haze:haze"))
+        assertEquals(false, ModuleRole.isAllowedInDesignSystem("androidx.camera:camera-core"))
+        assertEquals(false, ModuleRole.isAllowedInDesignSystem("io.insert-koin:koin-core"))
+    }
+
+    @Test
     fun `production classpaths reach exactly what ADR-014 allows`() {
         assertEquals(PRODUCTION, reachTable("compileClasspath"))
     }
@@ -34,6 +43,7 @@ class ModuleRoleTest {
         }
 
     private companion object {
+        const val DESIGNSYSTEM = ":shared:designsystem"
         const val KERNEL = ":shared:kernel"
         const val TESTING = ":shared:testing"
         const val LIVE_DOMAIN = ":features:live:domain"
@@ -55,6 +65,7 @@ class ModuleRoleTest {
         val MODULES =
             listOf(
                 KERNEL,
+                DESIGNSYSTEM,
                 TESTING,
                 LIVE_DOMAIN,
                 LIVE_APPLICATION,
@@ -77,17 +88,19 @@ class ModuleRoleTest {
         val PRODUCTION: Map<String, Set<String>> =
             mapOf(
                 KERNEL to setOf(),
+                DESIGNSYSTEM to setOf(KERNEL),
                 TESTING to setOf(KERNEL, LIVE_DOMAIN, MODELS_DOMAIN, TELEMETRY_DOMAIN),
                 LIVE_DOMAIN to setOf(KERNEL),
                 LIVE_APPLICATION to setOf(KERNEL, LIVE_DOMAIN),
                 LIVE_UVC to setOf(KERNEL, LIVE_DOMAIN),
                 LIVE_FILE to setOf(KERNEL, LIVE_DOMAIN),
                 LIVE_SYSTEM to setOf(KERNEL, LIVE_DOMAIN),
-                LIVE_UI to setOf(KERNEL, LIVE_DOMAIN, LIVE_APPLICATION),
+                LIVE_UI to setOf(DESIGNSYSTEM, KERNEL, LIVE_DOMAIN, LIVE_APPLICATION),
                 MODELS_DOMAIN to setOf(KERNEL, LIVE_DOMAIN),
                 MODELS_APPLICATION to setOf(KERNEL, LIVE_DOMAIN, LIVE_APPLICATION, MODELS_DOMAIN),
                 MODELS_STORE to setOf(KERNEL, LIVE_DOMAIN, MODELS_DOMAIN),
-                MODELS_UI to setOf(KERNEL, LIVE_DOMAIN, LIVE_APPLICATION, MODELS_DOMAIN, MODELS_APPLICATION),
+                MODELS_UI to
+                    setOf(DESIGNSYSTEM, KERNEL, LIVE_DOMAIN, LIVE_APPLICATION, MODELS_DOMAIN, MODELS_APPLICATION),
                 TELEMETRY_DOMAIN to setOf(KERNEL, LIVE_DOMAIN, MODELS_DOMAIN),
                 TELEMETRY_APPLICATION to
                     setOf(KERNEL, LIVE_DOMAIN, LIVE_APPLICATION, MODELS_DOMAIN, MODELS_APPLICATION, TELEMETRY_DOMAIN),

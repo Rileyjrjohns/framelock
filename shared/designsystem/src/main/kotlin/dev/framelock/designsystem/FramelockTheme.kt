@@ -1,4 +1,4 @@
-package dev.framelock.app
+package dev.framelock.designsystem
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -14,12 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * The one theme of the app: dark only, since the video is the content and the interface floats over it as frosted
- * glass. The glass panels draw their own colours (`live:ui` and `models:ui`, checked for AA contrast over a white
- * picture); this scheme is for the Material parts that remain (menus, text defaults) and the app background. The
- * semantic colours (status, detection classes) live next to the code that draws them.
- */
 private val FramelockColors =
     darkColorScheme(
         primary = Color(0xFF22D3EE),
@@ -100,6 +94,7 @@ private val FramelockShapes =
         extraLarge = RoundedCornerShape(28.dp),
     )
 
+/** The dark app theme, with Inter typography (SIL OFL 1.1; docs/licenses/Inter-OFL-1.1.txt). */
 @Composable
 fun FramelockTheme(content: @Composable () -> Unit) {
     MaterialTheme(

@@ -1,9 +1,9 @@
-package dev.framelock.live.ui
+package dev.framelock.designsystem
 
 import kotlin.math.pow
 
 /** WCAG 2.x contrast maths on opaque `0xAARRGGBB` colours (the alpha channel is ignored). */
-internal object Contrast {
+object Contrast {
     /** Minimum ratio for normal-size text (WCAG AA). */
     const val AA = 4.5
 

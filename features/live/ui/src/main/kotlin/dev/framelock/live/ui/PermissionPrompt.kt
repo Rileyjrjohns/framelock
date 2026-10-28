@@ -19,6 +19,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.framelock.designsystem.AppCard
+import dev.framelock.designsystem.IdleBrush
+import dev.framelock.designsystem.PrimaryButton
+import dev.framelock.designsystem.TextPrimary
+import dev.framelock.designsystem.TouchTarget
 
 private val CardMaxWidth = 420.dp
 
@@ -41,7 +46,7 @@ fun PermissionPrompt(
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        GlassSurface(Modifier.widthIn(max = CardMaxWidth)) {
+        AppCard(Modifier.widthIn(max = CardMaxWidth)) {
             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Text(
                     message,
@@ -49,10 +54,9 @@ fun PermissionPrompt(
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Start,
                 )
-                GlassButton(
+                PrimaryButton(
                     onClick = onAction,
                     modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget),
-                    look = ButtonLook.Accent,
                 ) {
                     Text(
                         actionLabel,

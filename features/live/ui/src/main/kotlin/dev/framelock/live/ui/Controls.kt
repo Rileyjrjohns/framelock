@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,10 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,13 +38,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.framelock.designsystem.AppCard
+import dev.framelock.designsystem.AppDropdown
+import dev.framelock.designsystem.AppIconButton
+import dev.framelock.designsystem.DangerButton
+import dev.framelock.designsystem.GhostButton
+import dev.framelock.designsystem.PrimaryButton
+import dev.framelock.designsystem.TouchTarget
 import dev.framelock.kernel.telemetry.ElementId
+import dev.framelock.designsystem.R as DesignR
 
 /** Width of the landscape rail. */
 private val RailWidth = 264.dp
 
 private const val SWAP_MILLIS = 200
-private val MenuShape = RoundedCornerShape(20.dp)
 
 /** What the controls show. */
 internal class ControlsState(
@@ -74,7 +79,7 @@ internal fun ControlsBar(
     actions: ControlsActions,
     modifier: Modifier = Modifier,
 ) {
-    GlassSurface(
+    AppCard(
         modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
@@ -105,7 +110,7 @@ internal fun ControlsRail(
     actions: ControlsActions,
     modifier: Modifier = Modifier,
 ) {
-    GlassSurface(
+    AppCard(
         modifier
             .fillMaxHeight()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Vertical))
@@ -139,22 +144,16 @@ private fun StartStopButton(
 ) {
     Crossfade(running, modifier, animationSpec = tween(SWAP_MILLIS), label = "start stop") { isRunning ->
         val label = stringResource(if (isRunning) R.string.action_stop else R.string.action_start)
-        val icon = if (isRunning) R.drawable.ic_stop else R.drawable.ic_play_arrow
-        GlassButton(
-            onClick = if (isRunning) actions.onStop else actions.onStart,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = TouchTarget)
-                    .track(if (isRunning) ElementId.STOP else ElementId.START, actions.onTrack),
-            look = if (isRunning) ButtonLook.Danger else ButtonLook.Accent,
-        ) {
-            Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(28.dp))
-            Text(
-                label,
-                Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            )
+        val icon = if (isRunning) DesignR.drawable.ic_stop else DesignR.drawable.ic_play_arrow
+        val buttonModifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = TouchTarget)
+                .track(if (isRunning) ElementId.STOP else ElementId.START, actions.onTrack)
+        if (isRunning) {
+            DangerButton(actions.onStop, buttonModifier) { StartStopContent(icon, label) }
+        } else {
+            PrimaryButton(actions.onStart, buttonModifier) { StartStopContent(icon, label) }
         }
     }
 }
@@ -173,7 +172,7 @@ private fun SourcePicker(
     var expanded by remember { mutableStateOf(false) }
     val description = stringResource(R.string.action_source, state.selected.label)
     Box(modifier) {
-        GlassButton(
+        GhostButton(
             onClick = {
                 actions.onOpenSources()
                 expanded = true
@@ -186,7 +185,11 @@ private fun SourcePicker(
                     .track(ElementId.SELECT_SOURCE, actions.onTrack),
             enabled = !state.running,
         ) {
-            Icon(painterResource(R.drawable.ic_videocam), contentDescription = null, modifier = Modifier.size(24.dp))
+            Icon(
+                painterResource(DesignR.drawable.ic_videocam),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
             Text(
                 state.selected.label,
                 Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -194,20 +197,23 @@ private fun SourcePicker(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, modifier = Modifier.size(24.dp))
+            Icon(
+                painterResource(DesignR.drawable.ic_expand_more),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, shape = MenuShape) {
-            state.options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.label, style = MaterialTheme.typography.bodyLarge) },
-                    onClick = {
-                        expanded = false
-                        actions.onSelectSource(option)
-                    },
-                    modifier = Modifier.heightIn(min = TouchTarget).track(ElementId.CHOOSE_SOURCE, actions.onTrack),
-                )
-            }
-        }
+        AppDropdown(
+            expanded,
+            { expanded = false },
+            state.options,
+            { it.label },
+            onSelect = {
+                expanded = false
+                actions.onSelectSource(it)
+            },
+            itemModifier = Modifier.track(ElementId.CHOOSE_SOURCE, actions.onTrack),
+        )
     }
 }
 
@@ -216,32 +222,18 @@ private fun HudToggle(
     state: ControlsState,
     actions: ControlsActions,
 ) {
-    IconAction(
-        icon = R.drawable.ic_bug_report,
+    AppIconButton(
+        icon = DesignR.drawable.ic_bug_report,
         description = stringResource(R.string.action_hud),
         onClick = actions.onToggleHud,
         modifier = Modifier.track(ElementId.TOGGLE_HUD, actions.onTrack),
-        look = if (state.hudVisible) ButtonLook.Selected else ButtonLook.Glass,
+        selected = state.hudVisible,
     )
 }
 
 @Composable
 private fun ModelsButton(actions: ControlsActions) {
-    IconAction(R.drawable.ic_neurology, stringResource(R.string.action_models), actions.onOpenModels)
-}
-
-/** A 64 dp circle of glass holding one icon; [description] is what a screen reader says. */
-@Composable
-private fun IconAction(
-    icon: Int,
-    description: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    look: ButtonLook = ButtonLook.Glass,
-) {
-    GlassButton(onClick, modifier.size(TouchTarget), look = look, contentPadding = 0.dp) {
-        Icon(painterResource(icon), contentDescription = description, modifier = Modifier.size(28.dp))
-    }
+    AppIconButton(actions.onOpenModels, DesignR.drawable.ic_neurology, stringResource(R.string.action_models))
 }
 
 @Preview(widthDp = 400)
@@ -265,3 +257,16 @@ private fun ControlsRailPreview() {
 }
 
 private fun previewActions() = ControlsActions({}, {}, {}, {}, {}, {}, {})
+
+@Composable
+private fun RowScope.StartStopContent(
+    icon: Int,
+    label: String,
+) {
+    Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(28.dp))
+    Text(
+        label,
+        Modifier.padding(start = 8.dp),
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+    )
+}

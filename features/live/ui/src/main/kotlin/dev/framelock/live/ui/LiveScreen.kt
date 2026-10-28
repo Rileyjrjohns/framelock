@@ -14,33 +14,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import dev.framelock.designsystem.EmptyState
+import dev.framelock.designsystem.GlassPalette
+import dev.framelock.designsystem.IdleBrush
+import dev.framelock.designsystem.LocalGlassHaze
+import dev.framelock.designsystem.glassSource
 import dev.framelock.live.application.metrics.LiveMetrics
 import dev.framelock.live.application.pipeline.AnnotatedFrame
 import dev.framelock.live.application.pipeline.PipelineUiState
@@ -49,8 +41,8 @@ import dev.framelock.live.domain.inference.LabelId
 import dev.framelock.live.domain.pipeline.PipelineState
 import dev.framelock.live.domain.system.MemoryPressure
 import dev.framelock.live.domain.system.ThermalLevel
+import dev.framelock.designsystem.R as DesignR
 
-internal val IdleBrush = Brush.radialGradient(listOf(Color(GlassPalette.INDIGO), Color(GlassPalette.BACKGROUND)))
 private val IdleCardMaxWidth = 340.dp
 private val IdleIconSize = 48.dp
 
@@ -196,7 +188,7 @@ private fun VideoArea(
         Box(
             Modifier
                 .fillMaxSize()
-                .hazeSource(haze)
+                .glassSource(haze)
                 .background(if (idle) IdleBrush else SolidColor(Color.Black)),
         ) {
             if (annotated != null) AnalysedFrame(annotated, frames.bitmapFor, frames.labelOf, frames.onDraw)
@@ -235,41 +227,13 @@ internal fun IdleHint(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
-    GlassSurface(modifier.padding(horizontal = 32.dp).widthIn(max = IdleCardMaxWidth)) {
-        Column(
-            Modifier.padding(horizontal = 28.dp, vertical = if (compact) 20.dp else 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (!compact) {
-                Icon(
-                    painterResource(R.drawable.ic_videocam),
-                    contentDescription = null,
-                    modifier =
-                        Modifier
-                            .size(IdleIconSize)
-                            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                            .drawWithContent {
-                                drawContent()
-                                drawRect(AccentBrush, blendMode = BlendMode.SrcIn)
-                            },
-                    tint = Color.White,
-                )
-            }
-            Text(
-                stringResource(R.string.idle_title),
-                color = TextPrimary,
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                stringResource(R.string.idle_hint),
-                color = TextSecondary,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
+    EmptyState(
+        stringResource(R.string.idle_title),
+        stringResource(R.string.idle_hint),
+        DesignR.drawable.ic_videocam,
+        modifier,
+        compact,
+    )
 }
 
 @Preview(widthDp = 400, heightDp = 400)

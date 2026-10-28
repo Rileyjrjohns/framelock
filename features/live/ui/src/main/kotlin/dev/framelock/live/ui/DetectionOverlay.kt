@@ -24,6 +24,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import dev.framelock.designsystem.GlassPalette
+import dev.framelock.designsystem.OverlayPalette
+import dev.framelock.designsystem.TABULAR_NUMBERS
 import dev.framelock.live.application.pipeline.AnnotatedFrame
 import dev.framelock.live.domain.inference.LabelId
 

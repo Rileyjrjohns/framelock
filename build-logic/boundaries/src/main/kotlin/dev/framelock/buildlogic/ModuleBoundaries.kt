@@ -148,6 +148,11 @@ abstract class VerifyModuleBoundaries : DefaultTask() {
                         !(role.layer == Layer.APP && target.startsWith("io.insert-koin:"))
                     ) {
                         violations += "No DI framework or annotation library is allowed: $target on '$classpath'"
+                    } else if (production && kind == "direct-module" && role.layer == Layer.DESIGNSYSTEM &&
+                        !ModuleRole.isAllowedInDesignSystem(target)
+                    ) {
+                        violations +=
+                            "Design system may only declare Compose and Haze libraries, found $target on '$classpath'"
                     } else if (role.isPure && production && !ModuleRole.isAllowedInPure(target)) {
                         violations += "$role may only use kotlinx-coroutines-core, found $target on '$classpath'"
                     }

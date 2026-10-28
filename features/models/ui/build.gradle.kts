@@ -3,7 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.haze)
-    implementation(libs.haze.blur)
+    implementation(projects.shared.designsystem)
     implementation(projects.features.models.application)
 }

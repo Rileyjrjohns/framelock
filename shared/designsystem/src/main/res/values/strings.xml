@@ -1,0 +1,8 @@
+<resources>
+    <string name="designsystem_catalog_action">Continue</string>
+    <string name="designsystem_catalog_title">Ready</string>
+    <string name="designsystem_catalog_message">Choose a source and start the session.</string>
+    <string name="designsystem_catalog_running">Running</string>
+    <string name="designsystem_catalog_back">Back</string>
+    <string name="designsystem_catalog_loading">Loading</string>
+</resources>

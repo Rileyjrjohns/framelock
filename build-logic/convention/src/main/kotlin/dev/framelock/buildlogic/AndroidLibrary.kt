@@ -11,6 +11,7 @@ import org.gradle.kotlin.dsl.dependencies
  * e.g. `:features:live:capture-uvc` -> `dev.framelock.live.capture.uvc` (ADR-014).
  */
 internal fun Project.featureNamespace(): String {
+    if (path == ":shared:designsystem") return "dev.framelock.designsystem"
     val segments = path.removePrefix(":").split(':')
     require(segments.size == 3 && segments[0] == "features") { "$path is not a feature module" }
     return "dev.framelock.${segments[1]}.${segments[2].replace('-', '.')}"

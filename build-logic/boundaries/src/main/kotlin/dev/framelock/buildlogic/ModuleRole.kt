@@ -3,7 +3,7 @@ package dev.framelock.buildlogic
 import org.gradle.api.GradleException
 
 /** Hexagonal layer of a module (ADR-014). */
-enum class Layer { CONTAINER, KERNEL, TESTING, DOMAIN, APPLICATION, ADAPTER, UI, APP, ARCHITECTURE_TESTS }
+enum class Layer { CONTAINER, KERNEL, DESIGNSYSTEM, TESTING, DOMAIN, APPLICATION, ADAPTER, UI, APP, ARCHITECTURE_TESTS }
 
 /**
  * Role of a module, derived from its Gradle path: a layer and, for feature modules, a feature.
@@ -36,6 +36,10 @@ data class ModuleRole(
                 false
             }
 
+            Layer.DESIGNSYSTEM -> {
+                target.layer == Layer.KERNEL
+            }
+
             Layer.TESTING -> {
                 target.layer == Layer.KERNEL || target.layer == Layer.DOMAIN
             }
@@ -55,7 +59,7 @@ data class ModuleRole(
             }
 
             Layer.UI -> {
-                target.layer == Layer.KERNEL ||
+                target.layer == Layer.KERNEL || target.layer == Layer.DESIGNSYSTEM ||
                     ((target.layer == Layer.DOMAIN || target.layer == Layer.APPLICATION) && ownOrUpstream)
             }
 
@@ -102,6 +106,8 @@ data class ModuleRole(
                 path == ":shared" || path == ":features" -> ModuleRole(Layer.CONTAINER)
 
                 path == ":shared:kernel" -> ModuleRole(Layer.KERNEL)
+
+                path == ":shared:designsystem" -> ModuleRole(Layer.DESIGNSYSTEM)
 
                 path == ":shared:testing" -> ModuleRole(Layer.TESTING)
 
@@ -159,6 +165,11 @@ data class ModuleRole(
                 module.startsWith("org.jetbrains.kotlinx:kotlinx-coroutines-core") ||
                 module == "org.jetbrains.kotlinx:kotlinx-coroutines-bom" ||
                 module == "org.jetbrains:annotations"
+
+        fun isAllowedInDesignSystem(module: String): Boolean =
+            module == "androidx.compose:compose-bom" || module.startsWith("androidx.compose.") ||
+                module.startsWith("dev.chrisbanes.haze:") ||
+                module.startsWith("org.jetbrains.kotlin:kotlin-stdlib")
 
         fun isDependencyInjection(module: String): Boolean = module.substringBefore(':') in DI_GROUPS
     }

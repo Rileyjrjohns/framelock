@@ -28,6 +28,7 @@ android {
 }
 
 dependencies {
+    implementation(projects.shared.designsystem)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(platform(libs.koin.bom))

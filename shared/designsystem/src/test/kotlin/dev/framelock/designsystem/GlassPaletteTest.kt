@@ -1,4 +1,4 @@
-package dev.framelock.live.ui
+package dev.framelock.designsystem
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

@@ -20,7 +20,19 @@ class AndroidUiConventionPlugin : Plugin<Project> {
             dependencies {
                 val composeBom = platform(libs.library("androidx-compose-bom"))
                 "implementation"(composeBom)
-                "implementation"(libs.findBundle("compose").get())
+                if (path == ":shared:designsystem") {
+                    listOf(
+                        "androidx-compose-ui",
+                        "androidx-compose-ui-graphics",
+                        "androidx-compose-foundation",
+                        "androidx-compose-material3",
+                        "androidx-compose-ui-tooling-preview",
+                    ).forEach {
+                        "api"(libs.library(it))
+                    }
+                } else {
+                    "implementation"(libs.findBundle("compose").get())
+                }
                 "debugImplementation"(libs.findBundle("compose-debug").get())
                 "androidTestImplementation"(composeBom)
                 "androidTestImplementation"(libs.library("androidx-compose-ui-test-junit4"))

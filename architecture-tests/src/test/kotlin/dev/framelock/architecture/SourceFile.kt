@@ -39,10 +39,10 @@ internal class SourceFile(
 
     /** The shared modules and every feature's `domain` and `application`: pure Kotlin (ADR-014). */
     val isPure: Boolean =
-        module != null && (module.startsWith("shared/") || PURE_FEATURE_LAYER.matches(module))
+        module != null && (module in setOf("shared/kernel", "shared/testing") || PURE_FEATURE_LAYER.matches(module))
 
     /** A feature's Compose module, or the app: they may not implement ports. */
-    val isUiOrApp: Boolean = module == "app" || module?.endsWith("/ui") == true
+    val isUiOrApp: Boolean = module in setOf("app", "shared/designsystem") || module?.endsWith("/ui") == true
 
     val code: String by lazy { stripCommentsAndStrings(declaration.text) }
 

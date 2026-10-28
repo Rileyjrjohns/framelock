@@ -18,6 +18,7 @@ Modules are grouped by feature, and each feature keeps the hexagonal layers as s
 :shared:kernel                  pure Kotlin — shared vocabulary: Clock, Tracer, model descriptors (ModelVersion,
                                 ModelManifest, ModelArtifact), TelemetryEvent (open interface), ScreenId, ElementId
 :shared:testing                 pure Kotlin — a fake for every port
+:shared:designsystem            Android Compose — theme, tokens, shared glass components
 :features:live:domain           pure Kotlin — Frame, InferenceResult, PipelineState, policies, ports
                                 (FrameSource, InferenceEngine, ThermalMonitor, MemoryPressureMonitor, DeviceInfoProvider)
 :features:live:application      pure Kotlin — InferencePipeline, MetricsAggregator, Start/Stop/Observe/ReportFrameRendered
@@ -54,7 +55,8 @@ the telemetry feature.
 | `domain` | kernel, domains of upstream features |
 | `application` | kernel, its domain, domains and applications of upstream features |
 | adapter | kernel, its domain, domains of upstream features |
-| `ui` | kernel, its domain and application, those of upstream features |
+| `ui` | design system, kernel, its domain and application, those of upstream features |
+| `shared:designsystem` | kernel; no feature module |
 | `shared:testing` | kernel, every domain |
 | `app` | everything except `shared:testing` and `architecture-tests` |
 

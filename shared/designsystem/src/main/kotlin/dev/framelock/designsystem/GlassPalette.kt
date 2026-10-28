@@ -1,11 +1,11 @@
-package dev.framelock.live.ui
+package dev.framelock.designsystem
 
 /**
  * The colours of the glass interface as `0xAARRGGBB` integers, so their contrast can be checked on the JVM
  * ([GlassPaletteTest]). A panel is the blurred video, shaded, then tinted; the video behind it is unknown, so the
  * shade is chosen for the worst case, a fully white picture ([Contrast.over]).
  */
-internal object GlassPalette {
+object GlassPalette {
     /** App background and the dark text on light fills (status chips, the accent button). */
     const val BACKGROUND = 0xFF0A0C10.toInt()
 
@@ -34,6 +34,8 @@ internal object GlassPalette {
     const val FLAT_FILL = 0xD11F1F1F.toInt()
 
     /** Black at 40%: the panel shadow. */
+    const val APP_FLAT_FILL = 0xE6181A22.toInt()
+
     const val SHADOW = 0x66000000
 
     /** Red at 22% over a glass button: Stop. */

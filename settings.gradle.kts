@@ -32,6 +32,7 @@ rootProject.name = "framelock"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":shared:kernel")
+include(":shared:designsystem")
 include(":shared:testing")
 include(":features:live:domain")
 include(":features:live:application")

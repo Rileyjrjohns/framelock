@@ -21,6 +21,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.framelock.designsystem.AppCard
+import dev.framelock.designsystem.GlassPalette
+import dev.framelock.designsystem.TABULAR_NUMBERS
+import dev.framelock.designsystem.TextPrimary
+import dev.framelock.designsystem.TextSecondary
 import dev.framelock.live.application.metrics.LiveMetrics
 import dev.framelock.live.domain.system.MemoryPressure
 import dev.framelock.live.domain.system.ThermalLevel
@@ -56,7 +61,7 @@ internal fun Hud(
     modifier: Modifier = Modifier,
 ) {
     val values = remember(live, thermal, memory) { HudValues(live, thermal.name, memory.name) }
-    GlassSurface(modifier.widthIn(min = 220.dp, max = 300.dp)) {
+    AppCard(modifier.widthIn(min = 220.dp, max = 300.dp)) {
         Column(
             Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
