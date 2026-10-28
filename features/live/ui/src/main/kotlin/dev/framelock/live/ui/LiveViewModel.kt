@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.framelock.live.application.metrics.LiveMetrics
-import dev.framelock.live.application.pipeline.AnnotatedFrame
 import dev.framelock.live.application.pipeline.PipelineUiState
 import dev.framelock.live.application.usecase.ObservePipeline
 import dev.framelock.live.application.usecase.StartResult
@@ -26,7 +25,6 @@ class LiveViewModel(
     val thermal = signals.thermal
     val memory = signals.memory
     val backend = signals.backend
-    val labelOf = rendering.labelOf
     val track = commands::track
     val state: StateFlow<PipelineUiState> = observe.state
     val live: StateFlow<LiveMetrics> = observe.live
@@ -42,7 +40,7 @@ class LiveViewModel(
     private val lastStart = MutableStateFlow<StartResult?>(null)
     val startResult: StateFlow<StartResult?> = lastStart.asStateFlow()
 
-    internal val renderer = rendering.renderer
+    val frames = rendering.frames
 
     fun start() {
         viewModelScope.launch {
@@ -57,7 +55,15 @@ class LiveViewModel(
     }
 
     /** Lists the sources afresh; call when the picker opens. */
+    private val menu = MutableStateFlow(false)
+    val sourceMenuExpanded: StateFlow<Boolean> = menu.asStateFlow()
+
+    fun dismissSources() {
+        menu.value = false
+    }
+
     fun refreshSources() {
+        menu.value = true
         viewModelScope.launch { sources.value = commands.sources() }
     }
 
@@ -65,14 +71,14 @@ class LiveViewModel(
      * Chooses the source. The screen only offers it while the pipeline is idle, because the pipeline picks its source
      * when a session opens: a change applies at the next start.
      */
-    fun selectSource(option: SourceOption) = commands.select(option.id)
+    fun selectSource(option: SourceOption) {
+        menu.value = false
+        commands.select(option.id)
+    }
 
     fun toggleHud() {
         hud.value = !hud.value
     }
-
-    /** Called once a frame is on screen: closes its end-to-end latency (ADR-011). */
-    internal fun onDrawn(frame: AnnotatedFrame) = rendering.onDrawn(frame)
 
     private companion object {
         const val TAG = "LiveViewModel"

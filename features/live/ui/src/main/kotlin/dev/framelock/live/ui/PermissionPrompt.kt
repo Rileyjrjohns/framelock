@@ -17,15 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import dev.framelock.designsystem.AppCard
 import dev.framelock.designsystem.IdleBrush
 import dev.framelock.designsystem.PrimaryButton
+import dev.framelock.designsystem.Spacing
 import dev.framelock.designsystem.TextPrimary
 import dev.framelock.designsystem.TouchTarget
-
-private val CardMaxWidth = 420.dp
+import dev.framelock.designsystem.Size as ComponentSize
 
 /**
  * What the app shows instead of the live screen while a permission is missing: a centred glass card on the app
@@ -43,11 +41,11 @@ fun PermissionPrompt(
             .fillMaxSize()
             .background(IdleBrush)
             .safeDrawingPadding()
-            .padding(24.dp),
+            .padding(Spacing.ExtraLarge),
         contentAlignment = Alignment.Center,
     ) {
-        AppCard(Modifier.widthIn(max = CardMaxWidth)) {
-            Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        AppCard(Modifier.widthIn(max = ComponentSize.PermissionCard)) {
+            Column(Modifier.padding(Spacing.ExtraLarge), verticalArrangement = Arrangement.spacedBy(Spacing.Large)) {
                 Text(
                     message,
                     color = TextPrimary,
@@ -66,10 +64,4 @@ fun PermissionPrompt(
             }
         }
     }
-}
-
-@Preview(widthDp = 400, heightDp = 600)
-@Composable
-private fun PermissionPromptPreview() {
-    PermissionPrompt("The camera is needed to analyse the video feed.", "Allow camera", {})
 }

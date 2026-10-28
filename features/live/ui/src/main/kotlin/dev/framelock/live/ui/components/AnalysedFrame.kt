@@ -1,4 +1,4 @@
-package dev.framelock.live.ui
+package dev.framelock.live.ui.components
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
@@ -14,37 +14,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
-import dev.framelock.designsystem.GlassPalette
+import dev.framelock.designsystem.AppColors
 import dev.framelock.designsystem.OverlayPalette
+import dev.framelock.designsystem.Radius
+import dev.framelock.designsystem.Spacing
 import dev.framelock.designsystem.TABULAR_NUMBERS
 import dev.framelock.live.application.pipeline.AnnotatedFrame
 import dev.framelock.live.domain.inference.LabelId
-
-private const val MAX_LABELS = 5
-private const val PERCENT = 100
-
-/** Past this many distinct (class, percent) labels the text cache starts over: it only guards against growth. */
-private const val MAX_CACHED_LABELS = 512
-
-private val BoxStroke = 2.5.dp
-private val GlowStroke = 6.dp
-private val BoxRadius = 14.dp
-private val ChipPaddingX = 10.dp
-private val ChipPaddingY = 5.dp
-private val DotSize = 8.dp
-private val DotGap = 6.dp
-private const val GLOW_ALPHA = 0.35f
-private val ChipFill = Color(GlassPalette.CHIP_FILL)
+import dev.framelock.live.ui.ChipFill
+import dev.framelock.live.ui.GLOW_ALPHA
+import dev.framelock.live.ui.LabelLayouts
+import dev.framelock.live.ui.MAX_LABELS
+import dev.framelock.live.ui.PERCENT
+import dev.framelock.live.ui.fitInto
+import dev.framelock.live.ui.placeChip
+import dev.framelock.designsystem.Size as ComponentSize
 
 /**
  * Draws the analysed frame and, on the same pixels, its detections; then reports the render (ADR-011). The frame and
@@ -68,7 +57,9 @@ internal fun AnalysedFrame(
         MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR_NUMBERS)
     val labels = remember(labelOf, style, density) { LabelLayouts(measurer, style, labelOf) }
     val (boxStroke, glowStroke) =
-        remember(density) { with(density) { Stroke(BoxStroke.toPx()) to Stroke(GlowStroke.toPx()) } }
+        remember(
+            density,
+        ) { with(density) { Stroke(ComponentSize.DetectionStroke.toPx()) to Stroke(Spacing.Small.toPx()) } }
     Canvas(modifier.fillMaxSize()) {
         val fit = fitInto(size.width, size.height, annotated.width.toFloat(), annotated.height.toFloat())
         val bitmap = bitmapFor(annotated, fit.width.toInt(), fit.height.toInt()) ?: return@Canvas
@@ -77,11 +68,11 @@ internal fun AnalysedFrame(
             dstOffset = IntOffset(fit.left.toInt(), fit.top.toInt()),
             dstSize = IntSize(fit.width.toInt(), fit.height.toInt()),
         )
-        val boxRadius = CornerRadius(BoxRadius.toPx())
-        val chipPaddingX = ChipPaddingX.toPx()
-        val chipPaddingY = ChipPaddingY.toPx()
-        val dotDiameter = DotSize.toPx()
-        val dotGap = DotGap.toPx()
+        val boxRadius = CornerRadius(Radius.Detection.toPx())
+        val chipPaddingX = Spacing.Intermediate.toPx()
+        val chipPaddingY = ComponentSize.LabelPaddingY.toPx()
+        val dotDiameter = Spacing.Compact.toPx()
+        val dotGap = Spacing.Small.toPx()
         annotated.result.detections.forEachIndexed { index, detection ->
             val box = detection.box
             val left = fit.left + box.left * fit.width
@@ -109,32 +100,11 @@ internal fun AnalysedFrame(
                 )
                 drawText(
                     layout,
-                    color = Color.White,
+                    color = AppColors.White,
                     topLeft = Offset(at.left + chipPaddingX + dotDiameter + dotGap, at.top + chipPaddingY),
                 )
             }
         }
         onDraw(annotated)
-    }
-}
-
-/** Measured label text, keyed by (class, percent) so no string is built for a label already seen. */
-private class LabelLayouts(
-    private val measurer: TextMeasurer,
-    private val style: TextStyle,
-    private val labelOf: (LabelId) -> String,
-) {
-    private val cache = HashMap<Int, TextLayoutResult>()
-
-    fun layoutOf(
-        label: LabelId,
-        percent: Int,
-    ): TextLayoutResult {
-        val key = label.value * (PERCENT + 1) + percent
-        cache[key]?.let { return it }
-        if (cache.size >= MAX_CACHED_LABELS) cache.clear()
-        return measurer
-            .measure("${labelOf(label)} $percent%", style, overflow = TextOverflow.Ellipsis, maxLines = 1)
-            .also { cache[key] = it }
     }
 }

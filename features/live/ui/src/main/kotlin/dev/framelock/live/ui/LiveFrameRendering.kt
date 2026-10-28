@@ -15,10 +15,11 @@ class LiveFrameRendering(
     private val report: ReportFrameRendered,
     val labelOf: (LabelId) -> String,
 ) {
-    internal val renderer = FrameRenderer(display, tracer)
+    private val renderer = FrameRenderer(display, tracer)
+    val frames = FrameCallbacks(renderer::bitmapFor, labelOf, ::onDrawn)
     private var lastReported: AnnotatedFrame? = null
 
-    fun onDrawn(frame: AnnotatedFrame) {
+    private fun onDrawn(frame: AnnotatedFrame) {
         if (frame == lastReported) return
         lastReported = frame
         report(frame.frameId, frame.sessionId, clock.nowNanos())

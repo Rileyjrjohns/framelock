@@ -25,4 +25,7 @@
     <string name="reason_no_previous_version">There is no previous version to roll back to.</string>
     <string name="reason_swap_refused">Models cannot change while a live session is running.</string>
     <string name="reason_load_failed">The model could not be loaded.</string>
+    <string name="models_preview_current">2.0.0</string>
+    <string name="models_preview_previous">1.0.0</string>
+    <string name="models_preview_other">3.0.0</string>
 </resources>

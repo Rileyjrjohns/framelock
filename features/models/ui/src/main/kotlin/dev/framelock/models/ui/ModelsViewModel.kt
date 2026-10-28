@@ -15,42 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** One installed model; [active] is the one the pipeline uses, [previous] the one a rollback returns to. */
-data class ModelRow(
-    val version: ModelVersion,
-    val active: Boolean,
-    val previous: Boolean,
-)
-
-/** What the last action did, for the status line. */
-sealed interface ModelsOutcome {
-    data class Imported(
-        val version: ModelVersion,
-    ) : ModelsOutcome
-
-    data class Changed(
-        val from: ModelVersion?,
-        val to: ModelVersion,
-    ) : ModelsOutcome
-
-    data class Unchanged(
-        val version: ModelVersion,
-    ) : ModelsOutcome
-
-    data class Refused(
-        val reason: ModelRejectionReason,
-    ) : ModelsOutcome
-}
-
-data class ModelsUiState(
-    val rows: List<ModelRow> = emptyList(),
-    /** An action is running: every control is disabled. */
-    val busy: Boolean = false,
-    val outcome: ModelsOutcome? = null,
-) {
-    val canRollBack: Boolean get() = rows.any { it.previous }
-}
-
 /**
  * What the Models screen needs. The operations are supplied by `:app` (ADR-014). One action runs at
  * a time; each one refreshes the list afterwards. [canSwap] mirrors `ModelSwapPolicy`: the screen disables every

@@ -3,6 +3,8 @@ package dev.framelock.designsystem
 import androidx.compose.ui.unit.dp
 
 object Size {
+    val HudMin = 220.dp
+    val HudMax = 300.dp
     val TouchTarget = 64.dp
     val SmallIcon = 18.dp
     val Icon = 24.dp

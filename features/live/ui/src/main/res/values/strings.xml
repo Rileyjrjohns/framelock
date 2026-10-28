@@ -26,4 +26,6 @@
     <string name="hud_drops">Drops</string>
     <string name="hud_thermal">Thermal</string>
     <string name="hud_memory">Memory</string>
+    <string name="live_preview_source">Auto</string>
+    <string name="live_preview_backend">GPU</string>
 </resources>

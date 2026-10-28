@@ -3,6 +3,7 @@ package dev.framelock.designsystem
 import androidx.compose.ui.unit.dp
 
 object Spacing {
+    val Minimal = 2.dp
     val Hairline = 1.dp
     val Tight = 4.dp
     val Small = 6.dp
