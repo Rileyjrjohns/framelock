@@ -18,7 +18,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-private val LABELS = SourceLabels(auto = "Auto", back = "Back", front = "Front", external = "External")
+private val LABELS =
+    SourceLabels(auto = "Auto", back = "Back", front = "Front", external = "External", file = "Test video")
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SelectingFrameSourceTest {
@@ -46,7 +47,7 @@ class SelectingFrameSourceTest {
             choice = { choice },
             hasExternalCamera = { hasExternal },
             hasUvcDevice = { this@SelectingFrameSourceTest.hasUvc },
-            labels = LABELS,
+            labels = MutableStateFlow(LABELS),
             uvcDescription = uvcMode,
             scope = backgroundScope,
         )

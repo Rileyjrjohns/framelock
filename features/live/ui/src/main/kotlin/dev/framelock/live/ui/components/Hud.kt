@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import dev.framelock.designsystem.AppCard
 import dev.framelock.designsystem.Spacing
 import dev.framelock.live.application.metrics.LiveMetrics
@@ -25,7 +27,15 @@ internal fun Hud(
     memory: MemoryPressure,
     modifier: Modifier = Modifier,
 ) {
-    val values = remember(live, thermal, memory) { HudValues(live, thermal.name, memory.name) }
+    val thermalText = thermalLevelText(thermal)
+    val memoryText = memoryPressureText(memory)
+    val format = stringResource(R.string.live_main_number_decimal)
+    val missing = stringResource(R.string.live_main_number_missing)
+    val locale = LocalConfiguration.current.locales[0]
+    val values =
+        remember(live, locale, format, missing) {
+            HudValues(live, format, missing, locale)
+        }
     AppCard(modifier.widthIn(min = ComponentSize.HudMin, max = ComponentSize.HudMax)) {
         Column(
             Modifier.padding(horizontal = Spacing.Large, vertical = Spacing.Standard),
@@ -33,20 +43,20 @@ internal fun Hud(
         ) {
             // The source line changes only when a session starts.
             sourceDescription?.let {
-                HudRow(R.string.hud_source, it)
+                HudRow(R.string.live_main_hud_source, it)
                 Separator()
             }
             // Like the source line, it changes only when a model is loaded.
-            backend?.let { HudRow(R.string.hud_backend, it) }
-            HudRow(R.string.hud_input_fps, values.inputFps)
-            HudRow(R.string.hud_inference_fps, values.inferenceFps)
+            backend?.let { HudRow(R.string.live_main_hud_backend, it) }
+            HudRow(R.string.live_main_hud_input_fps, values.inputFps)
+            HudRow(R.string.live_main_hud_inference_fps, values.inferenceFps)
             Separator()
-            HudRow(R.string.hud_inference_ms, values.inferenceMs)
-            HudRow(R.string.hud_e2e_ms, values.e2eMs)
-            HudRow(R.string.hud_drops, values.drops)
+            HudRow(R.string.live_main_hud_inference_ms, values.inferenceMs)
+            HudRow(R.string.live_main_hud_e2e_ms, values.e2eMs)
+            HudRow(R.string.live_main_hud_drops, values.drops)
             Separator()
-            HudRow(R.string.hud_thermal, values.thermal)
-            HudRow(R.string.hud_memory, values.memory)
+            HudRow(R.string.live_main_hud_thermal, thermalText)
+            HudRow(R.string.live_main_hud_memory, memoryText)
         }
     }
 }

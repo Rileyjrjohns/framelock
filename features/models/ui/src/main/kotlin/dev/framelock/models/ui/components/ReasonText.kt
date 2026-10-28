@@ -5,12 +5,12 @@ import dev.framelock.models.ui.R
 
 internal fun reasonText(reason: ModelRejectionReason): Int =
     when (reason) {
-        ModelRejectionReason.BAD_HASH -> R.string.reason_bad_hash
-        ModelRejectionReason.BAD_SIGNATURE -> R.string.reason_bad_signature
-        ModelRejectionReason.MALFORMED_MANIFEST -> R.string.reason_malformed_manifest
-        ModelRejectionReason.IO_ERROR -> R.string.reason_io_error
-        ModelRejectionReason.UNKNOWN_VERSION -> R.string.reason_unknown_version
-        ModelRejectionReason.NO_PREVIOUS_VERSION -> R.string.reason_no_previous_version
-        ModelRejectionReason.SWAP_REFUSED -> R.string.reason_swap_refused
-        ModelRejectionReason.LOAD_FAILED -> R.string.reason_load_failed
+        ModelRejectionReason.BAD_HASH -> R.string.models_main_reason_bad_hash
+        ModelRejectionReason.BAD_SIGNATURE -> R.string.models_main_reason_bad_signature
+        ModelRejectionReason.MALFORMED_MANIFEST -> R.string.models_main_reason_malformed_manifest
+        ModelRejectionReason.IO_ERROR -> R.string.models_main_reason_io_error
+        ModelRejectionReason.UNKNOWN_VERSION -> R.string.models_main_reason_unknown_version
+        ModelRejectionReason.NO_PREVIOUS_VERSION -> R.string.models_main_reason_no_previous_version
+        ModelRejectionReason.SWAP_REFUSED -> R.string.models_main_reason_swap_refused
+        ModelRejectionReason.LOAD_FAILED -> R.string.models_main_reason_load_failed
     }

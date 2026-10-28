@@ -1,7 +1,9 @@
 package dev.framelock.app.navigation.routes
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
@@ -41,6 +43,8 @@ internal fun NavGraphBuilder.liveRoutes(
         val thermal by vm.thermal.collectAsStateWithLifecycle()
         val memory by vm.memory.collectAsStateWithLifecycle()
         val backend by vm.backend.collectAsStateWithLifecycle()
+        val locales = LocalConfiguration.current.locales
+        LaunchedEffect(locales) { vm.dismissSources() }
         val running = pipeline.state != PipelineState.Idle
         val state =
             LiveUiState(

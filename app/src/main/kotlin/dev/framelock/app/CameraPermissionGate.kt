@@ -29,8 +29,8 @@ internal fun CameraPermissionGate(content: @Composable () -> Unit) {
         content()
     } else {
         PermissionPrompt(
-            stringResource(R.string.camera_permission_needed),
-            stringResource(R.string.camera_permission_grant),
+            stringResource(R.string.app_main_camera_permission_needed),
+            stringResource(R.string.app_main_camera_permission_grant),
             onAction = { request.launch(Manifest.permission.CAMERA) },
         )
     }

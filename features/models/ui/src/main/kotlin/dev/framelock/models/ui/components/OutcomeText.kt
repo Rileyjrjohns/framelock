@@ -9,19 +9,19 @@ import dev.framelock.models.ui.R
 internal fun outcomeText(outcome: ModelsOutcome): String =
     when (outcome) {
         is ModelsOutcome.Imported -> {
-            stringResource(R.string.outcome_imported, outcome.version.value)
+            stringResource(R.string.models_main_outcome_imported, outcome.version.value)
         }
 
         is ModelsOutcome.Changed -> {
-            outcome.from?.let { stringResource(R.string.outcome_changed, it.value, outcome.to.value) }
-                ?: stringResource(R.string.outcome_changed_first, outcome.to.value)
+            outcome.from?.let { stringResource(R.string.models_main_outcome_changed, it.value, outcome.to.value) }
+                ?: stringResource(R.string.models_main_outcome_changed_first, outcome.to.value)
         }
 
         is ModelsOutcome.Unchanged -> {
-            stringResource(R.string.outcome_unchanged, outcome.version.value)
+            stringResource(R.string.models_main_outcome_unchanged, outcome.version.value)
         }
 
         is ModelsOutcome.Refused -> {
-            stringResource(R.string.outcome_refused, stringResource(reasonText(outcome.reason)))
+            stringResource(R.string.models_main_outcome_refused, stringResource(reasonText(outcome.reason)))
         }
     }

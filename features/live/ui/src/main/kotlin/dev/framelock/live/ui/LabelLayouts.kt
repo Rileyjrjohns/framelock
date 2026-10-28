@@ -5,12 +5,14 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import dev.framelock.live.domain.inference.LabelId
+import java.util.Locale
 
 /** Measured label text, keyed by (class, percent) so no string is built for a label already seen. */
 internal class LabelLayouts(
     private val measurer: TextMeasurer,
     private val style: TextStyle,
     private val labelOf: (LabelId) -> String,
+    private val pattern: String,
 ) {
     private val cache = HashMap<Int, TextLayoutResult>()
 
@@ -22,7 +24,11 @@ internal class LabelLayouts(
         cache[key]?.let { return it }
         if (cache.size >= MAX_CACHED_LABELS) cache.clear()
         return measurer
-            .measure("${labelOf(label)} $percent%", style, overflow = TextOverflow.Ellipsis, maxLines = 1)
-            .also { cache[key] = it }
+            .measure(
+                String.format(Locale.ROOT, pattern, labelOf(label), percent),
+                style,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+            ).also { cache[key] = it }
     }
 }

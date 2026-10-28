@@ -11,6 +11,7 @@ import dev.framelock.live.capture.uvc.UvcDevices
 import dev.framelock.live.capture.uvc.UvcFrameSource
 import dev.framelock.live.domain.frame.SessionIdSequence
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /** All capture sources share one session sequence and one current selection. */
 internal class SourceWiring(
@@ -26,19 +27,27 @@ internal class SourceWiring(
 
     // One sequence for every source: the pipeline refuses a session id that does not increase (ADR-016).
     private val sessionIds = SessionIdSequence()
-    private val labels =
+    private val labels = MutableStateFlow(readLabels())
+
+    private fun readLabels() =
         SourceLabels(
-            auto = context.getString(R.string.source_auto),
-            back = context.getString(R.string.source_back),
-            front = context.getString(R.string.source_front),
-            external = context.getString(R.string.source_external),
+            appContext.getString(R.string.app_main_source_auto),
+            appContext.getString(R.string.app_main_source_back),
+            appContext.getString(R.string.app_main_source_front),
+            appContext.getString(R.string.app_main_source_external),
+            appContext.getString(R.string.app_main_source_file),
         )
+
+    fun refreshLabels() {
+        labels.value = readLabels()
+        selection.relabel(labels.value)
+    }
 
     // Listed afresh each time the picker opens: devices come and go.
     val selection =
-        SourceSelection(labels) {
+        SourceSelection(labels.value) {
             buildSourceOptions(
-                labels,
+                labels.value,
                 hasBack = CameraXCameras.has(appContext, CameraFacing.BACK),
                 hasFront = CameraXCameras.has(appContext, CameraFacing.FRONT),
                 hasExternal = CameraXCameras.has(appContext, CameraFacing.EXTERNAL),

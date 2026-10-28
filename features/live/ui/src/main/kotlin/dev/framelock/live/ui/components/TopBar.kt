@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import dev.framelock.designsystem.AppCard
@@ -30,7 +31,17 @@ internal fun TopBar(
     showReadout: Boolean,
 ) {
     val analysing = ui.state is PipelineState.Running || ui.state is PipelineState.Degraded
-    val readout = if (showReadout && analysing) remember(live) { Readout(live) } else null
+    val format = stringResource(R.string.live_main_number_integer)
+    val missing = stringResource(R.string.live_main_number_missing)
+    val locale = LocalConfiguration.current.locales[0]
+    val readout =
+        if (showReadout &&
+            analysing
+        ) {
+            remember(live, format, missing, locale) { Readout(live, format, missing, locale) }
+        } else {
+            null
+        }
     val numbers = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_NUMBERS)
     AppCard(Modifier.fillMaxWidth()) {
         Row(
@@ -42,7 +53,7 @@ internal fun TopBar(
             Box(Modifier.weight(1f)) {
                 ui.model?.let {
                     Text(
-                        stringResource(R.string.model_version, it.value),
+                        stringResource(R.string.live_main_model_version, it.value),
                         color = TextSecondary,
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1,
@@ -52,7 +63,7 @@ internal fun TopBar(
             }
             readout?.let {
                 Text(
-                    stringResource(R.string.readout, it.fps, it.ms),
+                    stringResource(R.string.live_main_readout, it.fps, it.ms),
                     color = TextPrimary,
                     style = numbers,
                     maxLines = 1,

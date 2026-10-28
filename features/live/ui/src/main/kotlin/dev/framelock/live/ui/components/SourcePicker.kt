@@ -37,7 +37,7 @@ internal fun SourcePicker(
     actions: SourceActions,
     modifier: Modifier = Modifier,
 ) {
-    val description = stringResource(R.string.action_source, state.selected.label)
+    val description = stringResource(R.string.live_main_action_source, state.selected.label)
     Box(modifier) {
         GhostButton(
             onClick = actions.onOpen,

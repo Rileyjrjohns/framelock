@@ -14,8 +14,8 @@ internal fun IdleHint(
     compact: Boolean = false,
 ) {
     EmptyState(
-        stringResource(R.string.idle_title),
-        stringResource(R.string.idle_hint),
+        stringResource(R.string.live_main_idle_title),
+        stringResource(R.string.live_main_idle_hint),
         DesignR.drawable.ic_videocam,
         modifier,
         compact,

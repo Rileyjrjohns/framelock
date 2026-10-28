@@ -8,5 +8,5 @@ import dev.framelock.designsystem.R as DesignR
 
 @Composable
 internal fun ModelsButton(onOpen: () -> Unit) {
-    AppIconButton(onOpen, DesignR.drawable.ic_neurology, stringResource(R.string.action_models))
+    AppIconButton(onOpen, DesignR.drawable.ic_neurology, stringResource(R.string.live_main_action_models))
 }

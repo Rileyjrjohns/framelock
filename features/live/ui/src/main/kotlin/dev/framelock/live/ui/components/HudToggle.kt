@@ -17,7 +17,7 @@ internal fun HudToggle(
 ) {
     AppIconButton(
         icon = DesignR.drawable.ic_bug_report,
-        description = stringResource(R.string.action_hud),
+        description = stringResource(R.string.live_main_action_hud),
         onClick = onToggle,
         modifier = Modifier.track(ElementId.TOGGLE_HUD, onTrack),
         selected = selected,

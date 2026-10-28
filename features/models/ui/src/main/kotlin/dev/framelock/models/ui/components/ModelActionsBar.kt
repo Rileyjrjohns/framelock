@@ -53,7 +53,7 @@ internal fun ModelActionsBar(
                     modifier = Modifier.size(Spacing.ExtraLarge),
                 )
                 Text(
-                    stringResource(R.string.action_rollback),
+                    stringResource(R.string.models_main_action_rollback),
                     Modifier.padding(start = Spacing.Compact),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
@@ -70,7 +70,7 @@ internal fun ModelActionsBar(
                     modifier = Modifier.size(Spacing.ExtraLarge),
                 )
                 Text(
-                    stringResource(R.string.action_import),
+                    stringResource(R.string.models_main_action_import),
                     Modifier.padding(start = Spacing.Compact),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,

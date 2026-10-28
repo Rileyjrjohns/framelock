@@ -37,7 +37,7 @@ internal fun ModelCard(
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.Intermediate)) {
                 Text(
-                    stringResource(R.string.model_row_version, row.version.value),
+                    stringResource(R.string.models_main_model_row_version, row.version.value),
                     color = TextPrimary,
                     style = MaterialTheme.typography.titleLarge,
                 )
@@ -45,14 +45,14 @@ internal fun ModelCard(
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.Compact)) {
                         if (row.active) {
                             SelectionChip(
-                                stringResource(R.string.badge_active),
+                                stringResource(R.string.models_main_badge_active),
                                 DesignR.drawable.ic_check_circle,
                                 active = true,
                             )
                         }
                         if (row.previous) {
                             SelectionChip(
-                                stringResource(R.string.badge_previous),
+                                stringResource(R.string.models_main_badge_previous),
                                 DesignR.drawable.ic_history,
                                 active = false,
                             )
@@ -67,7 +67,10 @@ internal fun ModelCard(
                     enabled = enabled,
                     contentPadding = Spacing.ExtraLarge,
                 ) {
-                    Text(stringResource(R.string.action_activate), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.models_main_action_activate),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                 }
             }
         }

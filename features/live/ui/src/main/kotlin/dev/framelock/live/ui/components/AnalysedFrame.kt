@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -31,6 +32,7 @@ import dev.framelock.live.ui.GLOW_ALPHA
 import dev.framelock.live.ui.LabelLayouts
 import dev.framelock.live.ui.MAX_LABELS
 import dev.framelock.live.ui.PERCENT
+import dev.framelock.live.ui.R
 import dev.framelock.live.ui.fitInto
 import dev.framelock.live.ui.placeChip
 import dev.framelock.designsystem.Size as ComponentSize
@@ -55,7 +57,8 @@ internal fun AnalysedFrame(
     val density = LocalDensity.current
     val style =
         MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR_NUMBERS)
-    val labels = remember(labelOf, style, density) { LabelLayouts(measurer, style, labelOf) }
+    val pattern = stringResource(R.string.live_main_detection_label)
+    val labels = remember(labelOf, style, density, pattern) { LabelLayouts(measurer, style, labelOf, pattern) }
     val (boxStroke, glowStroke) =
         remember(
             density,

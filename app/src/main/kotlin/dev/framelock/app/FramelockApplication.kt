@@ -32,6 +32,11 @@ class FramelockApplication :
                     },
                 ).build()
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        get<SourceWiring>().refreshLabels()
+    }
+
     override fun onCreate() {
         super.onCreate()
         startKoin {

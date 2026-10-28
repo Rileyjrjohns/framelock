@@ -25,7 +25,7 @@ internal fun StartStopButton(
     modifier: Modifier = Modifier,
 ) {
     Crossfade(running, modifier, animationSpec = tween(Motion.SWAP_MILLIS), label = "start stop") { isRunning ->
-        val label = stringResource(if (isRunning) R.string.action_stop else R.string.action_start)
+        val label = stringResource(if (isRunning) R.string.live_main_action_stop else R.string.live_main_action_start)
         val icon = if (isRunning) DesignR.drawable.ic_stop else DesignR.drawable.ic_play_arrow
         val buttonModifier =
             Modifier

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="designsystem_catalog_action">Continuer</string>
+    <string name="designsystem_catalog_title">Prêt</string>
+    <string name="designsystem_catalog_message">Choisissez une source et démarrez la session.</string>
+    <string name="designsystem_catalog_running">En cours</string>
+    <string name="designsystem_catalog_back">Retour</string>
+    <string name="designsystem_catalog_loading">Chargement</string>
+</resources>

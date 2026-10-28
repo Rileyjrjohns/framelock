@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="models_main_title">Modèles</string>
+    <string name="models_main_action_back">Retour</string>
+    <string name="models_main_action_import">Importer un modèle</string>
+    <string name="models_main_action_activate">Activer</string>
+    <string name="models_main_action_rollback">Rétablir</string>
+    <string name="models_main_badge_active">Actif</string>
+    <string name="models_main_badge_previous">Précédent</string>
+    <string name="models_main_empty">Aucun modèle installé.</string>
+    <string name="models_main_empty_hint">Importez un paquet de modèle signé pour commencer.</string>
+    <string name="models_main_locked">Arrêtez la session vidéo pour changer de modèle</string>
+    <string name="models_main_busy">Traitement…</string>
+    <string name="models_main_model_row_version">Modèle %1$s</string>
+    <string name="models_main_outcome_imported">%1$s importé</string>
+    <string name="models_main_outcome_changed">Modèle actif : %1$s → %2$s</string>
+    <string name="models_main_outcome_changed_first">Modèle actif : %1$s</string>
+    <string name="models_main_outcome_unchanged">%1$s est déjà actif</string>
+    <string name="models_main_outcome_refused">Refusé : %1$s</string>
+    <string name="models_main_reason_bad_hash">La somme de contrôle du fichier ne correspond pas.</string>
+    <string name="models_main_reason_bad_signature">La signature est invalide.</string>
+    <string name="models_main_reason_malformed_manifest">Le paquet du modèle est incomplet ou illisible.</string>
+    <string name="models_main_reason_io_error">Impossible de lire ou d’enregistrer le fichier.</string>
+    <string name="models_main_reason_unknown_version">Cette version n’est pas installée.</string>
+    <string name="models_main_reason_no_previous_version">Aucune version précédente à rétablir.</string>
+    <string name="models_main_reason_swap_refused">Impossible de changer de modèle pendant une session vidéo.</string>
+    <string name="models_main_reason_load_failed">Impossible de charger le modèle.</string>
+    <string name="models_preview_current">2.0.0</string>
+    <string name="models_preview_previous">1.0.0</string>
+    <string name="models_preview_other">3.0.0</string>
+</resources>

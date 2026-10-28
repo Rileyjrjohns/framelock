@@ -9,8 +9,6 @@ import dev.framelock.live.domain.port.MemoryPressureMonitor
 import dev.framelock.live.domain.port.ThermalMonitor
 import dev.framelock.live.system.SharedMemoryPressureMonitor
 import dev.framelock.live.system.SharedThermalMonitor
-import dev.framelock.telemetry.domain.port.TelemetrySink
-import dev.framelock.telemetry.room.TelemetryUploadRun
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test

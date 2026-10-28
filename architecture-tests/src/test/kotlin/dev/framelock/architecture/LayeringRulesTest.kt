@@ -21,7 +21,7 @@ class LayeringRulesTest {
     }
 
     @Test
-    fun `no module references a DI framework or DI annotations`() {
+    fun `only app may reference Koin and all other DI stays forbidden`() {
         assertNoViolation(Rules.referencesToDependencyInjection(files))
     }
 
@@ -44,6 +44,21 @@ class LayeringRulesTest {
     fun `pure modules do not use limitedParallelism`() {
         assertNoViolation(Rules.pureCallsToLimitedParallelism(files))
     }
+
+    @Test
+    fun `feature UI uses design system primitives`() = assertNoViolation(UiRules.materialImports(files))
+
+    @Test
+    fun `public UI declarations have one correctly named file each`() = assertNoViolation(UiRules.declarations(files))
+
+    @Test
+    fun `feature UI files stay within 400 lines`() = assertNoViolation(UiRules.fileLength(files))
+
+    @Test
+    fun `feature UI has no literal visible text`() = assertNoViolation(UiRules.literalText(files))
+
+    @Test
+    fun `feature UI uses dimension and colour tokens`() = assertNoViolation(UiRules.literalTokens(files))
 
     private fun assertNoViolation(violations: List<String>) {
         assertEquals(emptyList<String>(), violations, violations.joinToString("\n"))

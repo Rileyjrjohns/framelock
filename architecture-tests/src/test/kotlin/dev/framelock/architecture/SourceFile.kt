@@ -44,6 +44,32 @@ internal class SourceFile(
     /** A feature's Compose module, or the app: they may not implement ports. */
     val isUiOrApp: Boolean = module in setOf("app", "shared/designsystem") || module?.endsWith("/ui") == true
 
+    val isFeatureUi: Boolean = module?.let { it.startsWith("features/") && it.endsWith("/ui") } == true
+    val lineCount: Int get() =
+        declaration.text
+            .trimEnd()
+            .lineSequence()
+            .count()
+    val fileName: String get() = path.substringAfterLast('/').removeSuffix(".kt")
+
+    val publicUiDeclarations: List<String> by lazy {
+        val composableNames =
+            imports
+                .filter { it.name == "androidx.compose.runtime.Composable" }
+                .map { it.alias.ifEmpty { "Composable" } } + "Composable"
+        val types =
+            declaration
+                .classesAndInterfacesAndObjects(includeNested = false, includeLocal = false)
+                .filter { it.hasPublicOrDefaultModifier }
+                .map { it.name }
+        val composables =
+            declaration
+                .functions(includeNested = false, includeLocal = false)
+                .filter { it.hasPublicOrDefaultModifier && it.hasAnnotationWithName(composableNames) }
+                .map { it.name }
+        types + composables
+    }
+
     val code: String by lazy { stripCommentsAndStrings(declaration.text) }
 
     val packageName: String by lazy {

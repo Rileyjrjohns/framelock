@@ -11,27 +11,27 @@ import dev.framelock.live.ui.R
 internal fun bannerOf(state: PipelineState): Pair<String, Int> =
     when (state) {
         PipelineState.Idle -> {
-            stringResource(R.string.state_idle) to StateColors.IDLE
+            stringResource(R.string.live_main_state_idle) to StateColors.IDLE
         }
 
         PipelineState.Connecting -> {
-            stringResource(R.string.state_connecting) to StateColors.CONNECTING
+            stringResource(R.string.live_main_state_connecting) to StateColors.CONNECTING
         }
 
         is PipelineState.Running -> {
-            stringResource(R.string.state_running) to StateColors.RUNNING
+            stringResource(R.string.live_main_state_running) to StateColors.RUNNING
         }
 
         is PipelineState.Degraded -> {
-            stringResource(R.string.state_degraded, state.cause.label()) to
+            stringResource(R.string.live_main_state_degraded, degradationCauseText(state.cause)) to
                 StateColors.DEGRADED
         }
 
         is PipelineState.Paused -> {
-            stringResource(R.string.state_paused, state.cause.label()) to StateColors.FAULT
+            stringResource(R.string.live_main_state_paused, pauseCauseText(state.cause)) to StateColors.FAULT
         }
 
         is PipelineState.NoSignal -> {
-            stringResource(R.string.state_no_signal) to StateColors.FAULT
+            stringResource(R.string.live_main_state_no_signal) to StateColors.FAULT
         }
     }

@@ -13,7 +13,7 @@ internal fun statusText(
     canSwap: Boolean,
 ): Pair<String, Boolean>? =
     when {
-        ui.busy -> stringResource(R.string.models_busy) to false
-        !canSwap -> stringResource(R.string.models_locked) to false
+        ui.busy -> stringResource(R.string.models_main_busy) to false
+        !canSwap -> stringResource(R.string.models_main_locked) to false
         else -> ui.outcome?.let { outcomeText(it) to (it is ModelsOutcome.Refused) }
     }

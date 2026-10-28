@@ -21,8 +21,8 @@ internal fun TopBar(
     modifier: Modifier = Modifier,
 ) {
     AppTopBar(
-        stringResource(R.string.models_title),
-        stringResource(R.string.action_back),
+        stringResource(R.string.models_main_title),
+        stringResource(R.string.models_main_action_back),
         onBack,
         modifier
             .fillMaxWidth()

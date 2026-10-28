@@ -9,8 +9,8 @@ import dev.framelock.designsystem.R as DesignR
 @Composable
 internal fun ModelsEmpty() {
     EmptyState(
-        stringResource(R.string.models_empty),
-        stringResource(R.string.models_empty_hint),
+        stringResource(R.string.models_main_empty),
+        stringResource(R.string.models_main_empty_hint),
         DesignR.drawable.ic_upload_file,
         panel = true,
     )

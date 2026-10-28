@@ -9,6 +9,31 @@ import org.junit.jupiter.api.Test
  */
 class RuleFixturesTest {
     @Test
+    fun `direct material primitives are caught including aliases qualified calls and wildcard imports`() {
+        assertEquals(3, UiRules.materialImports(Scopes.fixture("ui-material")).size)
+    }
+
+    @Test
+    fun `multiple public declarations and wrong filenames are caught but internal and nested helpers are allowed`() {
+        assertEquals(2, UiRules.declarations(Scopes.fixture("ui-declarations")).size)
+    }
+
+    @Test
+    fun `overlong UI files are caught at 401 lines`() {
+        assertEquals(1, UiRules.fileLength(Scopes.fixture("ui-length")).size)
+    }
+
+    @Test
+    fun `literal UI text is caught including aliases and descriptions but comments and resources are allowed`() {
+        assertEquals(3, UiRules.literalText(Scopes.fixture("ui-text")).size)
+    }
+
+    @Test
+    fun `literal dimensions and colours are caught but zero dp and tokens are allowed`() {
+        assertEquals(2, UiRules.literalTokens(Scopes.fixture("ui-tokens")).size)
+    }
+
+    @Test
     fun `Koin is confined to app while other DI stays forbidden there`() {
         val violations = Rules.referencesToDependencyInjection(Scopes.fixture("koin-boundary"))
         assertEquals(4, violations.size)

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Framelock</string>
-    <string name="camera_permission_needed">The camera is needed to analyse the video feed.</string>
-    <string name="camera_permission_grant">Allow camera</string>
-    <string name="source_auto">Auto</string>
-    <string name="source_back">Back camera</string>
-    <string name="source_front">Front camera</string>
-    <string name="source_external">External camera</string>
-    <string name="source_file">Test video</string>
+    <string name="app_main_name">Framelock</string>
+    <string name="app_main_camera_permission_needed">The camera is needed to analyse the video feed.</string>
+    <string name="app_main_camera_permission_grant">Allow camera</string>
+    <string name="app_main_source_auto">Auto</string>
+    <string name="app_main_source_back">Back camera</string>
+    <string name="app_main_source_front">Front camera</string>
+    <string name="app_main_source_external">External camera</string>
+    <string name="app_main_source_file">Test video</string>
 </resources>

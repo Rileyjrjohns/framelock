@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_main_name">Framelock</string>
+    <string name="app_main_camera_permission_needed">La caméra est nécessaire pour analyser le flux vidéo.</string>
+    <string name="app_main_camera_permission_grant">Autoriser la caméra</string>
+    <string name="app_main_source_auto">Auto</string>
+    <string name="app_main_source_back">Caméra arrière</string>
+    <string name="app_main_source_front">Caméra avant</string>
+    <string name="app_main_source_external">Caméra externe</string>
+    <string name="app_main_source_file">Vidéo de test</string>
+</resources>

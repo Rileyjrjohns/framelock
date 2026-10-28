@@ -7,7 +7,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class SourceSelectionTest {
-    private val labels = SourceLabels(auto = "Auto", back = "Back", front = "Front", external = "External")
+    private val labels =
+        SourceLabels(auto = "Auto", back = "Back", front = "Front", external = "External", file = "Test video")
     private val webcam = UvcDeviceInfo("046d:085b", "Test Webcam")
     private var attached = listOf(webcam)
 
@@ -73,6 +74,19 @@ class SourceSelectionTest {
         assertEquals(SourceChoice.Uvc("046d:085b#2"), choiceOf("uvc:046d:085b#2"))
         assertEquals(SourceChoice.Auto, choiceOf("something else"))
     }
+
+    @Test
+    fun `locale changes relabel the selection without changing its choice`() =
+        runTest {
+            selection.options()
+            selection.select("back")
+            selection.relabel(labels.copy(back = "Caméra arrière"))
+            assertEquals(SourceOption("back", "Caméra arrière"), selection.current.value)
+            assertEquals(SourceChoice.Back, selection.choice)
+            selection.select("uvc:046d:085b")
+            selection.relabel(labels.copy(back = "Caméra arrière"))
+            assertEquals("Test Webcam", selection.current.value.label)
+        }
 
     @Test
     fun `Auto is selected by default`() {

@@ -14,12 +14,12 @@ internal fun StartMessage(startResult: StartResult?) {
     val (text, error) =
         when (startResult) {
             StartResult.NoActiveModel -> {
-                stringResource(R.string.start_no_model) to false
+                stringResource(R.string.live_main_start_no_model) to false
             }
 
             is StartResult.LoadFailed -> {
                 val reason = startResult.cause.message ?: startResult.cause::class.simpleName.orEmpty()
-                stringResource(R.string.start_load_failed, reason) to true
+                stringResource(R.string.live_main_start_load_failed, reason) to true
             }
 
             else -> {

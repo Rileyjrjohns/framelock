@@ -45,7 +45,7 @@ class SelectingFrameSource(
     private val choice: () -> SourceChoice,
     private val hasExternalCamera: suspend () -> Boolean,
     private val hasUvcDevice: () -> Boolean,
-    private val labels: SourceLabels,
+    labels: StateFlow<SourceLabels>,
     uvcDescription: StateFlow<String?>,
     scope: CoroutineScope,
 ) : FrameSource {
@@ -55,14 +55,14 @@ class SelectingFrameSource(
     private val chosen = MutableStateFlow<FrameSource?>(null)
 
     val activeDescription: StateFlow<String?> =
-        combine(chosen, uvcDescription) { source, uvcMode ->
+        combine(chosen, uvcDescription, labels) { source, uvcMode, names ->
             when {
                 source == null -> null
                 source === uvc -> uvcMode
-                source === external -> labels.external
-                source === front -> labels.front
-                source === file -> labels.file
-                else -> labels.back
+                source === external -> names.external
+                source === front -> names.front
+                source === file -> names.file
+                else -> names.back
             }
         }.stateIn(scope, SharingStarted.Eagerly, null)
 
