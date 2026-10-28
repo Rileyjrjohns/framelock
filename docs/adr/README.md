@@ -21,6 +21,8 @@ One file per decision: context, decision, consequences. A decision changes only 
 | [015](ADR-015-first-real-loop.md) | First real loop (M2) choices | Accepted |
 | [016](ADR-016-uvc-capture.md) | UVC capture (M3) choices | Accepted |
 | [017](ADR-017-system-adapters.md) | System adapters (M4): thermal headroom and memory pressure | Accepted |
+| [018](ADR-018-koin-and-navigation.md) | Application composition and navigation | Accepted |
+| [019](ADR-019-design-system.md) | Shared glass design system | Accepted |
 
 Amended in M1: ADR-003 (model and audit ports, swap lock), ADR-004 (telemetry string fields, events, windows).
 Amended in M7: ADR-014 (capture-file, a debug/benchmark FrameSource), ADR-009 (RENDER section owner), ADR-005 (debug backend override).

@@ -10,7 +10,7 @@ The code must be readable by the next engineer without a tour.
 
 - Feature-first hexagonal architecture (ADR-014): each feature keeps its own layers as separate modules, and dependencies point inward: `ui → application → domain ← adapters`, all of them on `shared:kernel`.
 - Features depend on each other in one direction only: `models → live`, `telemetry → live, models`.
-- Pure-Kotlin modules (`shared:*`, every `domain` and `application`): no `android.*`, no DI annotations. Only `kotlinx-coroutines-core` is allowed.
+- Pure-Kotlin modules (`shared:kernel`, `shared:testing`, every `domain` and `application`): no `android.*`, no DI annotations. Only `kotlinx-coroutines-core` is allowed.
 - Everything external sits behind a port: capture, inference runtime, model storage, thermal, memory, device info, telemetry transport, clock, tracing.
 - Correctness before throughput: a result is never displayed on a frame it was not computed from.
 - Measure before optimising. Every performance claim is backed by a trace in `docs/perf/`.
@@ -47,7 +47,9 @@ flowchart LR
   MD --> LD
   MA --> LA
   TD --> LD & MD
-  APP[app<br/>composition root] --> LA & LAD & LUI & MA & MS & MUI & TA & TR
+  DS[shared:designsystem<br/>theme · tokens · glass components]
+  LUI & MUI --> DS
+  APP[app<br/>composition root] --> LA & LAD & LUI & MA & MS & MUI & TA & TR & DS
 ```
 
 ## Modules
@@ -55,6 +57,7 @@ flowchart LR
 ```
 :shared:kernel                  pure Kotlin — Clock, Tracer, model descriptors, TelemetryEvent, ScreenId, ElementId
 :shared:testing                 pure Kotlin — a fake for every port + clocks (test fixtures)
+:shared:designsystem            Android Compose — theme, tokens, fonts, icons and glass component catalogue
 :features:live:domain           pure Kotlin — frames, results, pipeline state, policies, ports, LiveTelemetry
 :features:live:application      pure Kotlin — InferencePipeline, MetricsAggregator, Start/Stop/Observe/ReportFrameRendered
 :features:live:capture-uvc      FrameSource over a USB/UVC capture card (UVCAndroid, ADR-016)
@@ -70,7 +73,7 @@ flowchart LR
 :features:telemetry:domain      pure Kotlin — TelemetryAllowlist, TelemetryBatch, ports TelemetrySink and TelemetryUploader
 :features:telemetry:application pure Kotlin — TelemetryRecorder, TrackScreen, TrackUiInteraction
 :features:telemetry:room        TelemetrySink: Room buffer + WorkManager batch upload, LoggingUploader
-:app                            composition root (manual DI, `AppGraph`)
+:app                            composition root (Koin modules, startup orchestration and typed navigation)
 ```
 
 Optional: `:features:live:inference-onnx`, to prove the inference runtime is swappable without touching the domain.
@@ -78,9 +81,28 @@ Optional: `:features:live:inference-onnx`, to prove the inference runtime is swa
 Dependency rules (ADR-014, enforced by `verifyModuleBoundaries` and Konsist, ADR-006):
 - A domain sees the kernel and the domains of upstream features; an application also sees its own domain and upstream applications.
 - An adapter sees its feature's domain (and what that domain sees), never another adapter nor an application.
-- A UI module sees its feature's application and domain.
-- Only `:app` sees every module; it wires them in a single `AppGraph`.
+- A UI module sees its feature's application and domain, upstream inward layers, and the shared design system.
+- Only `:app` sees all production modules; its Koin modules wire them. The design system reaches only the kernel.
 - Each feature defines its own telemetry events; producers emit through a function wired in `:app`, so no feature depends on the telemetry feature.
+
+## Composition and navigation (ADR-018)
+
+`:app/di` contains System, Telemetry, Live, Models and Navigation modules, included by `appModule`. The application
+starts the container before startup work. The pipeline, engine, source selection, monitors, repository, audit,
+telemetry sink and application coroutine scope retain their application lifetimes. Named classes handle model
+bootstrap and labels, model listing and swap availability, source wiring, debug launch extras and upload scheduling.
+The existing telemetry worker factory is resolved through `Configuration.Provider`.
+
+`KoinGraphTest` verifies constructor dependencies across the whole module tree and proves an incomplete graph fails.
+Android context, callbacks and values built inside definitions are explicitly exempted; reflection verification does
+not execute Android services or inspect arbitrary `get()` calls inside factories. Device startup remains a separate check.
+
+`AppRoutes.Live` and `AppRoutes.Models` are serializable destinations. Each feature has a graph extension under
+`navigation/routes`, where its activity-owned ViewModel is resolved, flows collected and Android interactions handled.
+Screens receive state and callbacks. `AppNavigator` is a singleton command queue; `redirectOf` is the pure guard
+function (currently identity). `AppNavHost` collects while started, applies single-top navigation and tracks the actual
+destination. System back returns to Live, and consumed commands do not replay after rotation. Camera permission and
+debug launch behavior stay at the app boundary.
 
 ## Domain
 
@@ -205,7 +227,7 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
 
 ## UI (Compose)
 
-- Style: frosted glass over the video. Panels are blurred, translucent and rounded (28 dp, a 1 dp white edge at 14%, a soft shadow); chips and round buttons are fully rounded; one cyan-to-violet gradient marks the primary action and the selected states; the font is Inter. The blur source is the video area (`hazeSource`, Haze, `docs/soup.md`); the panels are siblings of it, never inside it. Blur needs API 31; below that a panel is a flat translucent fill. Because the picture behind a panel is unknown, the panel is darkened under its tint so white text reaches AA even over a white picture (`GlassPalette`, `GlassPaletteTest`). `live:ui` holds the primitives (`GlassSurface`, `GlassButton`); `models:ui` keeps a small copy, since a UI module may not see another feature's UI module.
+- Style: frosted glass over the video. Panels are blurred, translucent and rounded (28 dp, a 1 dp white edge at 14%, a soft shadow); chips and round buttons are fully rounded; one cyan-to-violet gradient marks the primary action and the selected states; the font is Inter. The blur source is the video area (`hazeSource`, Haze, `docs/soup.md`); the panels are siblings of it, never inside it. Blur needs API 31; below that a panel is a flat translucent fill. Because the picture behind a panel is unknown, the panel is darkened under its tint so white text reaches AA even over a white picture (`GlassPalette`, `GlassPaletteTest`). `:shared:designsystem` owns all primitives and tokens. Internal bases implement public button, card and chip variants. Video and app-gradient panels preserve distinct tints and API 29–30 fallback fills.
 - Live screen: the analysed frame fills the screen, letterboxed on black to its own aspect ratio (what you see is what was analysed, ADR-001), edge to edge under transparent system bars; every overlay pads itself by the window insets, display cutouts included.
   - Status: a glass bar at the top holds the state as a filled pill in the state colour with dark text (20 sp SemiBold, AA by construction, a pulsing dot while running; the colour crossfades in 200 ms), the model version, and, while the HUD is off, a compact "fps · ms" readout. A missing or unloadable model is explained in a glass card right under it.
   - Detections: rounded boxes (14 dp) in a fixed per-class colour with a soft glow of the same colour; a label pill (black at 60%, a dot in the class colour, white text) at the box's top-left corner, moved inside or below the box when it would leave the frame. Boxes and frame go through the same fit.
@@ -215,8 +237,12 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
 - Source picker (button in the controls, enabled only while stopped; a change applies at the next start): Auto, back, front, external camera, each attached UVC device.
 - Debug HUD (toggle): a glass card at the top-end under the status bar, with labelled rows in sections (secondary label, primary value in tabular figures): active source and, for UVC, capture mode; input fps, inference fps; inference ms, e2e ms, dropped frames; thermal level, memory pressure.
 - Models screen: same language on the app gradient. A glass top bar with a back arrow floats over the list, one glass card per version (an Active chip edged with the gradient, a Previous chip, an Activate pill), the last outcome or the reason the actions are off in a glass status card, and a glass dock at the bottom with Roll back (glass) and Import model (gradient); disabled whenever `ModelSwapPolicy` says no. Before the camera permission is granted, a centred glass card explains why and offers one gradient button.
-- One dark `FramelockTheme` in `:app` (colour scheme, Inter typography: display 28 SemiBold, title 20 SemiBold, body 16, label 14 Medium; shapes); screens read `MaterialTheme` tokens for type. The glass colours, the gradient, the status colours and the detection class palette are fixed colours, because they carry meaning or must hold a contrast whatever the picture. Digits that change (HUD, readout, detection labels) use tabular figures. Icons are Material Symbols vector drawables (`docs/soup.md`).
-- Bitmaps reused (double buffer): no allocation per frame.
+- One dark `FramelockTheme` in `:shared:designsystem` (colour scheme, Inter typography: display 28 SemiBold, title 20 SemiBold, body 16, label 14 Medium; shapes); screens read `MaterialTheme` tokens for type. The glass colours, the gradient, the status colours and the detection class palette are fixed colours, because they carry meaning or must hold a contrast whatever the picture. Digits that change (HUD, readout, detection labels) use tabular figures. Icons are Material Symbols vector drawables (`docs/soup.md`).
+- Thin screens accept immutable UI state and event callbacks. Components live under `ui/components`, one public type or composable per matching file, at most 400 lines. ViewModels stay in app routes. No private top-level helpers in screen files.
+- Catalogue: PrimaryButton (gradient), DangerButton (red glass), GhostButton, AppIconButton (normal/selected), StatusChip (state/pulse), SelectionChip (active/previous), AppCard, AppTopBar, AppDropdown, EmptyState (floating/panel), AppLoader and StatusMessage. Each has a preview. Screen previews cover stopped, running/HUD, source menu, landscape and Models active/previous/disabled/busy/empty states.
+- Feature UI uses design-system dimensions and colours, with `0.dp` the only literal dimension exception. Direct Material button/card/menu/input/progress primitives and literal visible text are forbidden by Konsist and negative fixtures.
+- Every interface string has a `<feature>_<screen>_<element>` resource key and a French translation. Tests compare key sets and placeholders. Configuration changes refresh built-in source labels while retaining source identity; model labels and device names remain supplied data.
+- Bitmaps reused (double buffer): no allocation per frame. Detection text layout caching, `DisplaySlot.read` locking and RENDER tracing are retained. Localized detection-label formatting runs only on a cache miss.
 - `Modifier.track(ElementId)` routes clicks to `TrackUiInteraction`.
 
 ## Tests (where a failure matters)
@@ -235,7 +261,7 @@ Rejected alternative: live preview plus an overlay hidden when too old. With fas
   - model store: bad signature rejected, atomic activation, rollback;
   - telemetry: cap and batching;
   - LiteRT golden test on a fixed image, with tolerance (instrumented).
-- Architecture (Konsist): no `android.*` in core, adapters independent from each other, ports implemented only in adapters.
+- Architecture: Gradle reach and external-library rules; Konsist purity, app-only DI, ports and UI rules with failing fixtures; resource key and French-placeholder checks.
 - UI: "No signal" banner shown and overlay hidden on disconnect.
 
 Each requirement links to its tests in `docs/traceability.md`.
@@ -269,6 +295,8 @@ Each requirement links to its tests in `docs/traceability.md`.
 - ADR-013: inference rate and degradation table
 - ADR-016: UVC capture, source selection and shared session ids
 - ADR-017: system adapters: thermal headroom forecast and memory pressure signals
+- ADR-018: application composition and typed navigation
+- ADR-019: shared glass design system and enforced UI rules
 
 ## Out of scope
 

@@ -54,7 +54,6 @@ class LiveViewModel(
         viewModelScope.launch { commands.stop() }
     }
 
-    /** Lists the sources afresh; call when the picker opens. */
     private val menu = MutableStateFlow(false)
     val sourceMenuExpanded: StateFlow<Boolean> = menu.asStateFlow()
 
@@ -62,6 +61,7 @@ class LiveViewModel(
         menu.value = false
     }
 
+    /** Lists the sources afresh; call when the picker opens. */
     fun refreshSources() {
         menu.value = true
         viewModelScope.launch { sources.value = commands.sources() }

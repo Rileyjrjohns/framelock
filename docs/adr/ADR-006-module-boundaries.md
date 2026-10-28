@@ -6,7 +6,7 @@
 ## Context
 
 The architecture depends on dependency rules: adapters depend on the domain only, never on each other; the core is
-pure Kotlin with kotlinx-coroutines-core as its only library; DI is manual. ADR-014 gives the module layout. Rules that are only written down erode.
+pure Kotlin with kotlinx-coroutines-core as its only library; DI uses an app-confined container (ADR-018). ADR-014 gives the module layout. Rules that are only written down erode.
 
 ## Decision
 
@@ -15,7 +15,7 @@ Two complementary checks, both part of `./gradlew check`.
 ### 1. Gradle: `verifyModuleBoundaries`
 
 The settings plugin `framelock.module-boundaries` (in `build-logic/boundaries`) applies to every project. Each module
-gets a role from its path: a layer (`kernel`, `testing`, `domain`, `application`, adapter, `ui`, `app`) and, for
+gets a role from its path: a layer (`kernel`, `testing`, `domain`, `application`, adapter, `ui`, `designsystem`, `app`) and, for
 feature modules, a feature. A module without a role, or of a feature missing from the feature graph, fails the build.
 What each role may reach is the table of ADR-014; the feature graph is declared once, in `ModuleRole`.
 
@@ -30,9 +30,11 @@ checked. Every `compileClasspath`, `runtimeClasspath` and `<variant>(Compile|Run
   (and its BOM) and `org.jetbrains:annotations`. `files(...)` dependencies are refused in pure modules: a jar has no
   identity the check could verify.
 - **DI libraries** (`com.google.dagger`, `io.insert-koin`, `javax.inject`, `jakarta.inject`, `com.google.inject`) may
-  not be declared by any module on a production classpath. A third-party library may still use one internally:
+  not be declared on production classpaths, except `io.insert-koin` in `:app` (ADR-018). A third-party library may still use one internally:
   CameraX's `camera-camera2-pipe` depends on Dagger at runtime, and espresso brings `javax.inject` to tests. Our own
   code cannot reference them (Konsist rule below), and pure modules cannot reach them at all (allowlist above).
+- **Design-system direct production dependencies**: Compose (including its BOM), Material 3, Haze and Kotlin
+  standard library only. Project reach is limited to the kernel; only feature UI and app can consume it (ADR-019).
 - A project from another build is refused.
 
 TestKit tests in `build-logic/boundaries` prove each failure case, including the bypasses above.
@@ -44,8 +46,9 @@ references it does not compile. Konsist checks what a module does with what it c
 imports **and** from fully qualified names in the code (comments and strings removed).
 
 - Pure modules reference no `android.`, `androidx.` or `com.google.android.`.
-- No module references a DI framework or DI annotation (`javax.inject.`, `jakarta.inject.`, `dagger.`, `org.koin.`,
-  `com.google.inject.`).
+- Only `:app` may reference `org.koin.`. No other DI framework or annotation is allowed anywhere in project code
+  (`javax.inject.`, `jakarta.inject.`, `dagger.`, `com.google.inject.`), including test sources. Fixtures prove Koin
+  is refused in pure, adapter and feature UI modules, and other DI remains forbidden in the app.
 - Pure modules import only `kotlin.`, `kotlinx.coroutines.`, the project's own packages, and a per-module JDK
   allowlist. Entries ending with a dot are package prefixes, other entries are exact class names:
 
@@ -61,6 +64,11 @@ imports **and** from fully qualified names in the code (comments and strings rem
   module or the app (one listed exception, ADR-016: `SelectingFrameSource`). Implementations are found through named, nested and local types (indirect parents included,
   names resolved through imports, aliases, star imports and the same package) and through object expressions.
 - Pure modules never call `limitedParallelism` (ADR-002).
+
+Feature UI rules live in `UiRules` and run through the same Konsist file scope and fixture suite: design-system
+primitives only, one public top-level UI declaration per matching filename, at most 400 lines, no literal visible
+text, and no literal dimensions or colours outside tokens (`0.dp` excepted). `UiResourcesTest` separately checks
+resource-key conventions and complete French translations with matching placeholders (ADR-019).
 
 Each rule selects its own scope from the whole file set, and the same call is run on fixture trees
 (`architecture-tests/src/test/fixtures`) that break it on purpose: a rule, or its scope, that silently stops matching
@@ -81,5 +89,7 @@ fails its own test. Module scopes must be non-empty.
     seen (android and DI references are, in any form);
   - only classpaths are checked: a module that adds another module's source directory (`srcDir`) or declares a
     project on `annotationProcessor` is not caught;
+  - UI literal checks are syntactic: they do not follow strings through variables, aliases of functions, or arbitrary
+    colour computations;
   - nothing prevents another module from writing to the `TelemetrySink` port directly: by convention only
     `TelemetryRecorder` does, and `:app` wires it.

@@ -1,7 +1,7 @@
 # ADR-018: Application composition and navigation
 
 - Status: Accepted
-- Date: 2026-10-27
+- Date: 2026-10-28
 - Amends: ADR-006 and ADR-014
 
 ## Context
@@ -11,7 +11,7 @@ contracts must survive the move to a container. Feature code must stay independe
 
 ## Decision
 
-Use Koin 4.2.2 only in `:app`, with modules for system services, telemetry, live inference and model management.
+Use Koin 4.2.2 only in `:app`, with modules for system services, telemetry, live inference, model management and navigation.
 Keep the classic constructor DSL: it needs no annotation processor or additional compiler plugin. The whole module
 tree is checked with the documented JVM `verify()` API. Values constructed inside definitions are declared explicitly
 in that check; missing application services must still fail it.
@@ -42,3 +42,8 @@ immediate screen switch. The serialization compiler plugin is applied only in `:
 DI remains an application concern, enforced by Gradle and source rules. Reflection-based verification does not inspect
 `get()` calls inside definition lambdas or qualifiers; constructor dependencies and explicit bindings stay the primary
 form of wiring. Device verification remains necessary for Android initialization and native resources.
+
+Versions were checked against the [Koin setup guide](https://insert-koin.io/docs/setup/), Maven Central metadata and
+[Navigation release notes](https://developer.android.com/jetpack/androidx/releases/navigation). The
+[verification guide](https://insert-koin.io/docs/reference/koin-test/verify/) documents the runtime-parameter exceptions.
+The existing worker factory avoids a second WorkManager integration and preserves its upload contract.

@@ -40,3 +40,19 @@ The cached detection text layouts, display-slot lock and RENDER tracing remain i
 The shared library is an explicit Android exception to the pure shared-module rule. Module-role tests pin its reach.
 Feature code keeps layout and state mapping; reusable visuals and their tokens have one owner. Visual equivalence is
 still a device check: JVM tests cover contrast and calculations, not blur, font rasterization or window insets.
+
+### Source and localization rules
+
+Feature UI has one public top-level type or composable per matching filename, components in `ui/components`, and no
+file over 400 lines. Screens have no private top-level helpers. Material primitives belong in the design system;
+feature layouts use its variants and tokens, with `0.dp` the only literal dimension exception. Source rules and
+negative fixtures check primitive imports (including aliases and qualified calls), declarations, file length,
+literal `Text`/content descriptions and literal dimensions/colours. These are syntactic checks, not data-flow analysis:
+indirect strings and arbitrary colour calculations still require review.
+
+Strings use `<feature>_<screen>_<element>` keys with complete English and French resources, including catalogue
+previews. Resource tests require matching keys and format placeholders. Enum-backed pipeline and HUD labels are
+mapped explicitly; source labels refresh on configuration changes without changing the selected source. An open
+source menu closes when the locale changes so it cannot retain old labels. Device names and model-supplied class
+names remain data, not translated interface copy. Number formatting follows the app locale. Detection-label patterns
+are read outside drawing; text formatting and measurement happen only on a cache miss, as before (ADR-012).

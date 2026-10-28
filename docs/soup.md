@@ -88,7 +88,7 @@ kotlinx-serialization-json 1.12.0 the latest on Maven Central; licences read fro
 | AndroidX Room (`room-runtime`, with `room-common`) | 2.8.5 | Capped telemetry buffer (ADR-004, M6) | Apache-2.0 |
 | AndroidX SQLite (`sqlite`, `sqlite-framework`) | 2.6.2 (transitive of Room) | Database access | Apache-2.0 |
 | AndroidX WorkManager (`work-runtime`) | 2.12.0 | Periodic telemetry upload | Apache-2.0 |
-| kotlinx-serialization-json (with `kotlinx-serialization-core`) | 1.12.0 (core raised from 1.7.3 by this dependency) | JSON encoding of telemetry events, written by hand, in the adapter only | Apache-2.0 |
+| kotlinx-serialization-json (with `kotlinx-serialization-core`) | 1.12.0 (core raised from 1.7.3 by this dependency) | JSON encoding of telemetry events; type-safe route serialization in `:app` (ADR-018) | Apache-2.0 |
 
 ### Added for the glass interface
 
@@ -99,8 +99,8 @@ the release flag and the Maven `release` status contradict); Inter 4.1 is the la
 
 | Component | Version | Purpose | Licence |
 |---|---|---|---|
-| Haze (`dev.chrisbanes.haze:haze`, `haze-blur`, with `haze-utils`) | 2.0.1 | Backdrop blur of the glass panels over the live video and the Models list (`live:ui`, `models:ui`). Blurs with `RenderEffect` on API 31+; below that the panels draw their own flat translucent fill (Haze's own scrim fallback is not used: it raises the tint's alpha with the blur radius until it is nearly opaque) | Apache-2.0 (POM) |
-| Inter (Regular, Medium, SemiBold, Bold; static TTF from `extras/ttf` of the 4.1 release zip, SHA-256 of the zip `9883fdd4…b11e`) | 4.1 | The interface font, `app/src/main/res/font/inter_*.ttf`, wired in `FramelockTheme` | SIL Open Font License 1.1 (copy in `docs/licenses/Inter-OFL-1.1.txt`) |
+| Haze (`dev.chrisbanes.haze:haze`, `haze-blur`, with `haze-utils`) | 2.0.1 | Backdrop blur of the glass panels over the live video and the Models list (owned by `shared:designsystem`). Blurs with `RenderEffect` on API 31+; below that the panels draw their own flat translucent fill (Haze's own scrim fallback is not used: it raises the tint's alpha with the blur radius until it is nearly opaque) | Apache-2.0 (POM) |
+| Inter (Regular, Medium, SemiBold, Bold; static TTF from `extras/ttf` of the 4.1 release zip, SHA-256 of the zip `9883fdd4…b11e`) | 4.1 | The interface font, `shared/designsystem/src/main/res/font/inter_*.ttf`, wired in `FramelockTheme` | SIL Open Font License 1.1 (copy in `docs/licenses/Inter-OFL-1.1.txt`) |
 
 Transitive of Haze 2.0.1, as resolved: `org.jetbrains.compose.{ui,animation}` 1.12.1 (the Compose Multiplatform
 coordinates of the same Compose release as the BOM; their Android variants resolve beside the AndroidX ones with no
@@ -117,12 +117,30 @@ need no variation settings on API 29.
 
 Eleven Material Symbols (Outlined, filled variant, 24 px, weight 400) are copied as vector drawables from
 `github.com/google/material-design-icons` (`symbols/android/<name>/materialsymbolsoutlined/<name>_fill1_24px.xml`),
-Apache-2.0, with the `tint` and `autoMirrored` attributes dropped: `live:ui` has `ic_play_arrow`, `ic_stop`,
-`ic_videocam`, `ic_bug_report`, `ic_neurology`, `ic_expand_more`; `models:ui` has `ic_arrow_back`, `ic_check_circle`, `ic_history`,
+Apache-2.0, with the `tint` and `autoMirrored` attributes dropped: `shared:designsystem` owns `ic_play_arrow`, `ic_stop`,
+`ic_videocam`, `ic_bug_report`, `ic_neurology`, `ic_expand_more`, `ic_arrow_back`, `ic_check_circle`, `ic_history`,
 `ic_upload_file`, `ic_undo`. `androidx.compose.material:material-icons-core` and `-extended` are not used: the BOM
 2026.09.00 pins both at 1.7.8, the last release, and
 [the Compose documentation](https://developer.android.com/develop/ui/compose/graphics/images/material) says the
 artifact "is no longer maintained or recommended for use in your apps", and recommends Material Symbols as XML.
+
+### Added for app composition and navigation (ADR-018)
+
+Stable versions verified on 2026-10-27 using the [Koin setup guide](https://insert-koin.io/docs/setup/),
+[Maven Central metadata](https://repo.maven.apache.org/maven2/io/insert-koin/koin-bom/maven-metadata.xml),
+[Navigation release notes](https://developer.android.com/jetpack/androidx/releases/navigation) and Google Maven metadata.
+Licences below were read from the resolved artifact POMs. Release runtime dependencies were rechecked on 2026-10-28.
+
+| Component | Version | Purpose | Licence |
+|---|---|---|---|
+| Koin BOM, android, androidx-compose; transitive core, core-viewmodel, compose, compose-viewmodel | 4.2.2 | App-only composition and lifecycle-owned ViewModels | Apache-2.0 |
+| Navigation Compose, with navigation-common and navigation-runtime | 2.10.2 | Serializable destinations, back stack and navigation host in `:app` | Apache-2.0 |
+| Stately concurrency, strict and concurrent-collections (transitive of Koin core) | 2.1.0 | Container concurrency support | Apache-2.0 |
+
+The serialization runtime remains 1.12.0; its existing catalog entry is reused. Its compiler plugin is 2.4.21,
+aligned with Kotlin. The existing `TelemetryWorkerFactory` is retained, so no Koin WorkManager artifact is added.
+The Koin [graph verification API](https://insert-koin.io/docs/reference/koin-test/verify/) is used on the JVM;
+its constructor analysis does not exercise native or Android initialization.
 
 ### Measurement material, M7 (not shipped)
 
@@ -144,6 +162,7 @@ optimisation steps that need them.
 | JUnit Jupiter / Platform (JUnit 6) | 6.1.3 | JVM and local Android tests | EPL-2.0 |
 | kotlinx-coroutines-test | 1.11.0 | Virtual time in tests | Apache-2.0 |
 | Konsist | 0.18.1 | Architecture rules | Apache-2.0 |
+| Koin test, test-junit5 | 4.2.2 | Whole module-tree constructor verification and missing-definition regression, `:app` only | Apache-2.0 (POMs) |
 | JUnit 4 | 4.13.2 | Instrumented tests | EPL-1.0 |
 | AndroidX Test (core, runner, rules, ext-junit) | 1.7.0 / ext 1.3.0 | Instrumented tests | Apache-2.0 |
 | AndroidX WorkManager testing (`work-testing`) | 2.12.0 | `TestListenableWorkerBuilder` for the upload worker (instrumented) | Apache-2.0 |
@@ -155,7 +174,7 @@ optimisation steps that need them.
 |---|---|---|---|
 | Gradle | 9.8.2 | Build | Apache-2.0 |
 | Android Gradle Plugin | 9.4.1 | Android build, built-in Kotlin, Lint | Apache-2.0 |
-| Kotlin Gradle Plugin, Compose compiler plugin | 2.4.21 | Kotlin compilation | Apache-2.0 |
+| Kotlin Gradle Plugin, Compose compiler and serialization plugins | 2.4.21 | Kotlin/Compose compilation; serialization compiler applied only to `:app` for routes | Apache-2.0 |
 | KSP | 2.3.12 | Annotation processing (Room compiler, M6; works with AGP 9.4.1 built-in Kotlin, see the build) | Apache-2.0 |
 | Room Gradle plugin (`androidx.room`) | 2.8.5 | Exports the database schema (`features/telemetry/room/schemas/`) | Apache-2.0 |
 | Foojay toolchain resolver | 1.0.0 | JDK provisioning | Apache-2.0 |

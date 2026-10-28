@@ -41,7 +41,7 @@
                 android:resource="@xml/device_filter" />
         </activity>
 
-        <!-- WorkManager is configured by FramelockApplication (manual DI); only its initializer is removed. -->
+        <!-- WorkManager is configured by FramelockApplication (app container); only its initializer is removed. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

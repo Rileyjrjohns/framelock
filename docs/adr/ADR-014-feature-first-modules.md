@@ -35,7 +35,7 @@ Modules are grouped by feature, and each feature keeps the hexagonal layers as s
 :features:telemetry:domain      pure Kotlin — TelemetryAllowlist, port TelemetrySink
 :features:telemetry:application pure Kotlin — TelemetryRecorder, TrackScreen, TrackUiInteraction
 :features:telemetry:room        adapter
-:app                            composition root (manual DI)
+:app                            composition root (Koin confined here; typed navigation)
 :architecture-tests             Konsist
 ```
 
@@ -63,14 +63,14 @@ the telemetry feature.
 Test classpaths may add `:shared:testing` and what it reaches. Pure-Kotlin modules (`kernel`, `testing`, every
 `domain` and `application`) keep the rules of ADR-006: no `android.*`, no DI, kotlinx-coroutines-core only.
 
-Packages follow modules: `dev.framelock.kernel`, `dev.framelock.<feature>.domain`, `dev.framelock.<feature>.application`,
+Packages follow modules: `dev.framelock.kernel`, `dev.framelock.designsystem`, `dev.framelock.<feature>.domain`, `dev.framelock.<feature>.application`,
 `dev.framelock.<feature>.<adapter>`, `dev.framelock.<feature>.ui`. Ports live in `dev.framelock.<feature>.domain.port`
 or `dev.framelock.kernel.port`.
 
 ## Consequences
 
 - One capability is read in one place; the feature graph is checked by Gradle like the layers (ADR-006).
-- More modules (18), each small. Convention plugins keep their build files to a few lines.
+- Twenty modules including architecture tests, each small. Convention plugins keep their build files to a few lines.
 - `ModelSwapPolicy` sits in `models:domain` and reads the live feature's `PipelineState`: allowed, since models is
   downstream of live.
 - `architecture.md` "Modules" and ADR-006 describe this layout from now on.
@@ -86,5 +86,12 @@ the I420 pool of `capture-camerax` rather than depending on it: adapters never d
 `:app` offers it as a "Test video" source in debug builds only, when `filesDir/perf/input.mp4` exists, and never
 chooses it automatically. The module is part of the release build's classpath (the dependency is the same for every
 variant); a release build never instantiates the source, offers no such option and ignores the debug launch extras
-(`DebugLaunch`). Splitting it into a debug-only dependency would need a debug source set for `AppGraph`, which was not
+(`DebugLaunch`). Splitting it into a debug-only dependency would need a debug source set for the composition root, which was not
 worth it for one class.
+
+### Amendment (2026-10-28): app composition and shared UI
+
+ADR-018 confines Koin and platform navigation to `:app`. Feature UI modules retain constructor-injected ViewModels
+and inward dependencies; they never import the container or adapters. ADR-019 adds `:shared:designsystem`, the one
+Android shared module. It reaches no feature and accepts only Compose, Material 3, Haze and Kotlin standard library
+as direct production libraries. `ModuleRoleTest` pins the updated reach and external-library allowlist.
