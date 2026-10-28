@@ -145,7 +145,7 @@ The JVM tests are in `features/telemetry/room/src/test`; the instrumented ones (
 
 | ID | Requirement | Status |
 |---|---|---|
-| LRT-1 | LiteRT golden test on a fixed image, with tolerance (instrumented) | inference-litert → `LiteRtGoldenTest` (needs a device and `scripts/fetch-model.sh`; golden recorded on first run) | run on API 36, 2026-10-28: missing approved golden; candidate retained for review |
+| LRT-1 | Real-image detections: each annotated person has a distinct same-class detection with score ≥ 0.5 and IoU ≥ 0.8, independent of order and extras | inference-litert → `LiteRtGoldenTest` (forced CPU/GPU × RGBA/YUV), `DetectionMatchingTest` (assignment and rejection cases); [fixture provenance](../features/live/inference-litert/src/androidTest/assets/classroom-004s.md); needs a device and `scripts/fetch-model.sh` | covered: 10 instrumented tests passed on API 36, 2026-10-28; no generated golden |
 | UI-T | `Modifier.track(ElementId)` routes clicks to `TrackUiInteraction` | live:ui → `Track.kt`, wired in `LiveModule`; no automated test yet | implemented, untested |
 | PIPE-7b | Trace sections for capture, preprocess, postprocess and render (ADR-009 ownership) | capture-camerax, capture-file, inference-litert, live:ui `FrameRenderer` (`RENDER`: conversion and bitmap upload, M7) (visible in Perfetto; no automated test) | implemented, untested (to check in a trace) |
 | LBL-1 | Overlay names come from the labels embedded in the model, whatever the zip offset convention | models:store → `EmbeddedLabelsTest` (both conventions, stored and deflated entries, the fetched model when present) | covered |

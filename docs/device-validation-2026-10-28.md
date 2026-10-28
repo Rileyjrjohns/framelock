@@ -35,12 +35,38 @@ clipped second line in the fixed-width bottom action buttons.
 - `./gradlew spotlessApply && ./gradlew check :app:assembleDebug`: passed; 712 JVM tests, no failures or skips.
 - `:features:telemetry:room:connectedDebugAndroidTest`: 10 passed.
 - `:features:live:ui:connectedDebugAndroidTest`: 1 passed (landscape regression).
-- `:features:live:inference-litert:connectedDebugAndroidTest`: 1 failed because `golden.txt` has not been approved.
+- Initial `:features:live:inference-litert:connectedDebugAndroidTest`: 1 failed because `golden.txt` had not been approved.
   Model loading and repeated inference completed before that assertion. The candidate output was collected separately
   under `/tmp/framelock-device/golden-candidate.txt`; it was not added to test assets or treated as an approved oracle.
 
-The instrumented suite therefore has 11 passing tests and one unresolved reference-data failure. Tests run in
-library test packages so the installed application's data is preserved.
+Tests run in library test packages so the installed application's data is preserved.
+
+## LiteRT reference correction
+
+The synthetic gradient produced only low-confidence noise. Its candidate was rejected as a reference and remains
+outside the repository. The test now uses a real frame from the existing CC BY 4.0 video, with two people annotated
+before inspecting inference output. [Fixture provenance](../features/live/inference-litert/src/androidTest/assets/classroom-004s.md)
+records the source, transformations, hashes and pixel coordinates.
+
+Each reference requires a distinct `person` detection with score ≥ 0.5 and intersection-over-union ≥ 0.8. Order,
+extra detections and exact scores do not matter. Separate tests force CPU and GPU, assert the selected backend,
+and exercise both RGBA and YUV preprocessing. There is no fallback or generated reference to approve.
+
+| Backend / input | Foreground person: score / IoU | Standing person: score / IoU |
+|---|---|---|
+| CPU / RGBA | 0.688 / 0.872 | 0.840 / 0.908 |
+| CPU / YUV | 0.707 / 0.872 | 0.840 / 0.920 |
+| GPU / RGBA | 0.738 / 0.857 | 0.840 / 0.905 |
+| GPU / YUV | 0.738 / 0.871 | 0.840 / 0.907 |
+
+The replacement suite passed all 10 instrumented tests: four inference combinations and six matching regressions
+(order/ties/extras, missing/wrong-class/low-confidence detections, duplicate assignment, overlapping candidates,
+IoU boundaries and empty references). Together with the 11 earlier telemetry and HUD checks, the device checks
+now have 21 passing tests and no unresolved reference-data failure. The raw results and logs are under
+`/tmp/framelock-litert/instrumented/`; measured matches are in `/tmp/framelock-litert/detection-evidence.json`.
+
+The exact colour-conversion JVM tests remain necessary: a detector may still recognize a person after a colour
+error. These device assertions cover object-level results, not bit-exact preprocessing or other phone GPUs.
 
 ## Remaining checks
 

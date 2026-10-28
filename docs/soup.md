@@ -144,7 +144,8 @@ its constructor analysis does not exercise native or Android initialization.
 
 ### Measurement material, M7 (not shipped)
 
-Used by `scripts/perf/` only; none of it is in the APK or a Gradle dependency (no new library).
+The video and measurement tools are not shipped in the application APK or added as Gradle dependencies.
+A derived still image is bundled only in the instrumentation test APK; see "Tests only" below.
 
 | Component | Version | Purpose | Licence |
 |---|---|---|---|
@@ -156,6 +157,13 @@ The Benchmark and Baseline Profile libraries listed under "Planned" are not adde
 optimisation steps that need them.
 
 ## Tests only
+
+The LiteRT detection fixture uses frame 120 (4.000 s) of the pinned `classroom.mp4` above, resized to 640 × 360
+and converted to full-range BT.601 I420 and RGB PNG. Attribution: "classroom.mp4, sample-videos, Intel Corporation,
+CC BY 4.0; frame extracted, resized and converted". The [pinned source licence](https://github.com/intel-iot-devkit/sample-videos/blob/57978890822836f2b4743852f04f62fc511757e4/LICENSE)
+was rechecked on 2026-10-28. The original-publication caveat above still applies.
+[Fixture provenance](../features/live/inference-litert/src/androidTest/assets/classroom-004s.md) records the commands,
+hashes and manual annotations. Only the two derived image assets are committed, not the video or model binary.
 
 | Component | Version | Purpose | Licence |
 |---|---|---|---|

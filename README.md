@@ -163,8 +163,11 @@ Both the periodic work and the debug one-time work are unique (`telemetry-upload
 ```bash
 ./gradlew check                          # unit tests, architecture rules, module boundaries, ktlint, detekt, Lint
 ./gradlew assembleDebug                  # app/build/outputs/apk/debug/
-./gradlew connectedDebugAndroidTest      # instrumented tests, including the LiteRT golden test (device needed)
+./gradlew connectedDebugAndroidTest      # instrumented tests, including real-image CPU/GPU detections (device needed)
 ```
+
+The LiteRT tests need the model from `scripts/fetch-model.sh` and a GPU-capable device. They check annotated
+people with score ≥ 0.5 and IoU ≥ 0.8 on RGBA and YUV inputs; [fixture provenance and reproduction](features/live/inference-litert/src/androidTest/assets/classroom-004s.md).
 
 End-to-end latency is render time minus capture time; it does not include compositor and display latency.
 
