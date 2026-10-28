@@ -8,7 +8,7 @@ import org.koin.dsl.module
 /** All production definitions, also verified by the JVM graph test. */
 internal val appModule =
     module {
-        includes(systemModule, telemetryModule, liveModule, modelsModule)
+        includes(systemModule, telemetryModule, liveModule, modelsModule, navigationModule)
         singleOf(::ApplicationStartup)
         singleOf(::DebugLaunchHandler)
     }

@@ -1,36 +1,17 @@
 package dev.framelock.app
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.core.content.ContextCompat
-import dev.framelock.kernel.telemetry.ScreenId
-import dev.framelock.live.ui.LiveScreen
+import dev.framelock.app.navigation.AppNavHost
 import dev.framelock.live.ui.LiveViewModel
-import dev.framelock.live.ui.PermissionPrompt
-import dev.framelock.models.ui.ModelsScreen
-import dev.framelock.models.ui.ModelsViewModel
-import dev.framelock.telemetry.application.TrackScreen
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.parameter.parametersOf
@@ -38,7 +19,6 @@ import org.koin.core.parameter.parametersOf
 class MainActivity : ComponentActivity() {
     private val environment: AppEnvironment by inject()
     private val debugHandler: DebugLaunchHandler by inject()
-    private val trackScreen: TrackScreen by inject()
 
     // Debug builds only: a script drives a run through intent extras (see DebugLaunch). Release builds ignore them.
     private val debugLaunch by lazy {
@@ -52,7 +32,6 @@ class MainActivity : ComponentActivity() {
         }
     }
     private val liveViewModel: LiveViewModel by viewModel { parametersOf(debugLaunch.hud) }
-    private val modelsViewModel: ModelsViewModel by viewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Dark, transparent system bars: the video runs under them and the screens pad themselves by the insets.
@@ -67,46 +46,8 @@ class MainActivity : ComponentActivity() {
         if (debugLaunch.isActive) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
             FramelockTheme {
-                Surface(Modifier.fillMaxSize()) { Navigation() }
+                Surface(Modifier.fillMaxSize()) { AppNavHost(this@MainActivity, debugLaunch.hud) }
             }
-        }
-    }
-
-    /** Two screens, no navigation library: system back leaves Models for Live. */
-    @Composable
-    private fun Navigation() {
-        var screen by rememberSaveable { mutableStateOf(ScreenId.LIVE) }
-        LaunchedEffect(screen) { trackScreen(screen) }
-        BackHandler(enabled = screen == ScreenId.MODELS) { screen = ScreenId.LIVE }
-        when (screen) {
-            ScreenId.LIVE -> {
-                CameraPermissionGate { LiveScreen(liveViewModel, onOpenModels = { screen = ScreenId.MODELS }) }
-            }
-
-            ScreenId.MODELS -> {
-                ModelsScreen(modelsViewModel, onBack = { screen = ScreenId.LIVE })
-            }
-        }
-    }
-
-    /** CameraX is the M2 source: the live screen needs the camera permission first. */
-    @Composable
-    private fun CameraPermissionGate(content: @Composable () -> Unit) {
-        val granted = {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED
-        }
-        var allowed by remember { mutableStateOf(granted()) }
-        val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed = it }
-        LaunchedEffect(Unit) { if (!allowed) request.launch(Manifest.permission.CAMERA) }
-        if (allowed) {
-            content()
-        } else {
-            PermissionPrompt(
-                message = stringResource(R.string.camera_permission_needed),
-                actionLabel = stringResource(R.string.camera_permission_grant),
-                onAction = { request.launch(Manifest.permission.CAMERA) },
-            )
         }
     }
 }

@@ -2,6 +2,7 @@
 # Prereleases that exist are noted so nobody "upgrades" to them by accident.
 
 [versions]
+navigation = "2.10.2" # Official stable release, 2026-09-23.
 koin = "4.2.2" # Stable, Maven Central and official setup documentation, 2026-10-27.
 # ---------- Toolchain ----------
 # AGP 9.4.1: newest stable (9.5.0-rc01 is a prerelease). Max API 37, min Gradle 9.6.0, JDK 17.
@@ -78,6 +79,7 @@ composeRules = "0.6.8"            # built for ktlint 1.8.0 (its release dependen
 detekt = "1.23.8"
 
 [libraries]
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose" }
@@ -165,7 +167,6 @@ compose-rules-ktlint = { module = "io.nlopez.compose.rules:ktlint", version.ref 
 
 # ---------- Optional: add only after a decision ----------
 # androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version = "2.7.1" }   # only with Room 3 / a bundled driver
-# androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version = "2.10.2" }
 # androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version = "1.2.0" }
 # androidx-benchmark-junit4 = { module = "androidx.benchmark:benchmark-junit4", version.ref = "benchmark" }  # microbenchmarks
 # turbine = { module = "app.cash.turbine:turbine", version = "1.2.1" }   # built against coroutines 1.10.2

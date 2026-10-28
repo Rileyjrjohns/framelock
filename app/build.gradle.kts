@@ -1,5 +1,6 @@
 plugins {
     id("framelock.android.application")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -27,6 +28,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)

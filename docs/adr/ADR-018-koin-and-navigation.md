@@ -24,8 +24,12 @@ feature UI modules retain their existing inward dependencies.
 Keep the existing telemetry worker factory, resolved from Koin by `Configuration.Provider`. The default initializer
 stays disabled. Schedule uploads only after container startup. Keep the debug tee, delayed upload and launch extras.
 
-Navigation Compose and the application navigator will be added in the next phase, before routes are moved out of the
-activity. Guards belong to a pure redirect function. This ADR records the intended boundary, not completed routing.
+Navigation Compose 2.10.2 owns the saved back stack. Serializable Live and Models routes are declared in `AppRoutes`,
+with one graph extension per feature. `AppNavigator` queues commands in a channel; the host consumes them while started.
+Consumed commands are not replayed on rotation. `redirectOf` is the single guard point and currently redirects nothing.
+The activity remains the ViewModel owner, preserving debug autostart and presentation state when visiting Models.
+Destination changes drive screen tracking, including system back. Transitions are disabled to preserve the existing
+immediate screen switch. The serialization compiler plugin is applied only in `:app`.
 
 ## Alternatives considered
 
