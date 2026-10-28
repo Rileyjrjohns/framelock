@@ -56,3 +56,10 @@ mapped explicitly; source labels refresh on configuration changes without changi
 source menu closes when the locale changes so it cannot retain old labels. Device names and model-supplied class
 names remain data, not translated interface copy. Number formatting follows the app locale. Detection-label patterns
 are read outside drawing; text formatting and measurement happen only on a cache miss, as before (ADR-012).
+
+### Device validation (2026-10-28)
+
+The physical API 36 check exposed a landscape-height overflow in the HUD. Use two columns in landscape while keeping
+the existing portrait arrangement, colours, typography and spacing. An instrumented regression checks visibility of
+every metric; it failed on the single-column layout and passes after this correction. Short import labels fit the
+bottom action buttons in both languages. Results and remaining limits: [device validation](../device-validation-2026-10-28.md).

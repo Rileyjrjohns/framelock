@@ -74,10 +74,8 @@ internal fun VideoArea(
             hud?.let {
                 Hud(
                     live,
-                    it.sourceDescription,
-                    it.backend,
-                    it.thermal,
-                    it.memory,
+                    it,
+                    compact = landscape,
                     Modifier.align(Alignment.End),
                 )
             }

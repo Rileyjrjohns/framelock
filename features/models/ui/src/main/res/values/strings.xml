@@ -2,7 +2,7 @@
 <resources>
     <string name="models_main_title">Models</string>
     <string name="models_main_action_back">Back</string>
-    <string name="models_main_action_import">Import model</string>
+    <string name="models_main_action_import">Import</string>
     <string name="models_main_action_activate">Activate</string>
     <string name="models_main_action_rollback">Roll back</string>
     <string name="models_main_badge_active">Active</string>

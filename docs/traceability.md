@@ -22,21 +22,22 @@ Gradle tests are in `build-logic/boundaries` (`ModuleBoundariesPluginTest`), Kon
 
 ## Composition, navigation and design system (ADR-018/019)
 
-The historical device checks below predate this refactor. Every device verification for these changes is **not yet run**.
+The historical milestone checks below predate this refactor. The API 36 follow-up is recorded in
+[device validation, 2026-10-28](device-validation-2026-10-28.md); untested device cases remain explicit there.
 
 | ID | Requirement | Automated verification | Device verification |
 |---|---|---|---|
-| DI-1 | Whole app graph has constructor dependencies; incomplete graph fails | app → `KoinGraphTest` | not yet run |
-| NAV-1 | Pure redirects, ordered commands buffered without a collector, consumed commands never replay | app → `AppNavigatorTest`; saved back stack owned by the navigation host | not yet run |
+| DI-1 | Whole app graph has constructor dependencies; incomplete graph fails | app → `KoinGraphTest` | API 36 startup and worker factory checked, 2026-10-28; fresh bootstrap not rerun |
+| NAV-1 | Pure redirects, ordered commands buffered without a collector, consumed commands never replay | app → `AppNavigatorTest`; saved back stack owned by the navigation host | API 36 toolbar/system back and locale recreation checked, 2026-10-28 |
 | DS-1 | Shared UI reaches no feature and accepts only its external allowlist | `ModuleRoleTest`, `verifyModuleBoundaries` | not yet run |
-| DS-2 | Glass, accent, status and overlay text maintain AA contrast | designsystem → `GlassPaletteTest`, `AppGlassContrastTest`, `ContrastTest`, `OverlayPaletteTest`; catalogue previews compile | not yet run |
+| DS-2 | Glass, accent, status and overlay text maintain AA contrast | designsystem → `GlassPaletteTest`, `AppGlassContrastTest`, `ContrastTest`, `OverlayPaletteTest`; catalogue previews compile | API 36 glass and layout inspected, 2026-10-28; API 29–30 not yet run |
 | UI-R1 | Feature UI cannot import Material button/card/menu/input/progress primitives | `UiRules.materialImports`, fixture `ui-material` | not yet run |
 | UI-R2 | One public top-level UI declaration per matching filename | `UiRules.declarations`, fixture `ui-declarations` | not yet run |
 | UI-R3 | Feature UI files have at most 400 lines | `UiRules.fileLength`, fixture `ui-length` (400 accepted, 401 rejected) | not yet run |
 | UI-R4 | No literal Text or contentDescription in feature UI | `UiRules.literalText`, fixture `ui-text` | not yet run |
 | UI-R5 | Dimensions and colours come from tokens, except 0.dp | `UiRules.literalTokens`, fixture `ui-tokens` | not yet run |
-| UI-L1 | Resource keys name feature/screen/element; French keys and placeholders match English | `UiResourcesTest`; app → `SourceSelectionTest` locale relabeling preserves choice/device names | not yet run |
-| UI-S1 | State-driven screens and portrait/landscape/HUD/menu/Models states | Existing ViewModel tests; eight screen previews compile; rendering and layout tests retained | not yet run |
+| UI-L1 | Resource keys name feature/screen/element; French keys and placeholders match English | `UiResourcesTest`; app → `SourceSelectionTest` locale relabeling preserves choice/device names | API 36 English/French screens, source labels and outcomes checked, 2026-10-28 |
+| UI-S1 | State-driven screens and portrait/landscape/HUD/menu/Models states | Existing ViewModel tests; eight screen previews compile; rendering and layout tests retained | API 36 portrait/landscape/HUD/menu/Models checked, 2026-10-28; HudLayoutTest passed |
 
 ## Core (M1)
 
@@ -144,7 +145,7 @@ The JVM tests are in `features/telemetry/room/src/test`; the instrumented ones (
 
 | ID | Requirement | Status |
 |---|---|---|
-| LRT-1 | LiteRT golden test on a fixed image, with tolerance (instrumented) | inference-litert → `LiteRtGoldenTest` (needs a device and `scripts/fetch-model.sh`; golden recorded on first run) | written, not yet run |
+| LRT-1 | LiteRT golden test on a fixed image, with tolerance (instrumented) | inference-litert → `LiteRtGoldenTest` (needs a device and `scripts/fetch-model.sh`; golden recorded on first run) | run on API 36, 2026-10-28: missing approved golden; candidate retained for review |
 | UI-T | `Modifier.track(ElementId)` routes clicks to `TrackUiInteraction` | live:ui → `Track.kt`, wired in `LiveModule`; no automated test yet | implemented, untested |
 | PIPE-7b | Trace sections for capture, preprocess, postprocess and render (ADR-009 ownership) | capture-camerax, capture-file, inference-litert, live:ui `FrameRenderer` (`RENDER`: conversion and bitmap upload, M7) (visible in Perfetto; no automated test) | implemented, untested (to check in a trace) |
 | LBL-1 | Overlay names come from the labels embedded in the model, whatever the zip offset convention | models:store → `EmbeddedLabelsTest` (both conventions, stored and deflated entries, the fetched model when present) | covered |
